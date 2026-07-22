@@ -43,8 +43,13 @@ Requires Node 20+ (developed on Node 24). Netlify platform features run locally 
 
 | Document | What it covers |
 |---|---|
+| [`AGENTS.md`](AGENTS.md) | Entry point for AI agents — task queue, working agreement, settled decisions |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Folder structure, naming, commit format, PR scope, release policy |
-| [`docs/PLAN.md`](docs/PLAN.md) | What v1 is, delivery milestones, known risks — **draft** |
+| [`docs/PLAN.md`](docs/PLAN.md) | What v1 is, delivery milestones, known risks |
+
+Work is tracked in [GitHub Issues](https://github.com/nampham2101/child-care-v2/issues); release
+history is in [GitHub Releases](https://github.com/nampham2101/child-care-v2/releases). There is no
+changelog file, by design.
 
 Further documents (`ARCHITECTURE.md`, `DATA-MODEL.md`, `RUNBOOK.md`, `adr/`) are added as the work
 they describe is taken on. Documentation precedes the code it governs.
