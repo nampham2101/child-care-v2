@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Production deploys are driven by the release workflow on a v* tag, never by a
+# push to main. Netlify's automatic production publishing must stay disabled in
+# the site's build settings for that guarantee to hold — this file cannot
+# enforce it. Deploy Previews on pull requests remain automatic.

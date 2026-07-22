@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+ * Warm and human. The palette is deliberately quiet: an anxious parent
+ * comparing centers reads calm competence as trustworthiness, and reads
+ * saturated primary colours as a site made for children rather than for them.
+ * One accent (sage) carries every call to action; terracotta is used sparingly
+ * for warmth, never for a control.
+ */
+@theme {
+  --color-bg: #fbf8f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3ede4;
+
+  --color-border: #e5dcd0;
+  --color-border-strong: #d3c6b4;
+
+  --color-ink: #2c2621;
+  --color-ink-muted: #6b6259;
+  --color-ink-subtle: #8d857b;
+
+  --color-sage: #4f6f5a;
+  --color-sage-deep: #3c5545;
+  --color-sage-tint: #e8efe9;
+
+  --color-terracotta: #c2653f;
+  --color-terracotta-tint: #f7ebe4;
+
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-inter);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
