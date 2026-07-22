@@ -133,6 +133,8 @@ Every PR is self-reviewed against this before merge:
 - [ ] Tests cover the real user path, not just a convenient trigger
 - [ ] Conventions in this file still hold, or are updated in this PR
 - [ ] Deploy Preview checked on a real phone for any visual change
+- [ ] Labelled to match its commit type, so the release notes group correctly
+- [ ] Staged with explicit paths — never `git add -A`, which sweeps in untracked files
 
 Self-review reliably catches slips — typos, missing error handling, forgotten edge cases. It does
 not catch the author's own design blind spots. Deploy Previews and the release gate cover that.
@@ -149,7 +151,11 @@ not catch the author's own design blind spots. Deploy Previews and the release g
   read unpublished rows and cannot read another organization's rows.
 - **Tests before big refactors.** Load-bearing logic is never rewritten without a safety net first.
 
-CI gates merge on: typecheck, lint, unit tests, end-to-end tests, and a Lighthouse budget.
+CI gates merge on: **typecheck, lint, production build, and end-to-end tests.**
+
+Unit tests join that gate when there is pure logic worth testing, and a Lighthouse budget when there
+are enough pages to budget. Neither is in the gate today. Config for a test runner with nothing
+meaningful to run is theatre — this line moves when the tests do, in the same PR that adds them.
 
 ---
 
@@ -163,17 +169,45 @@ CI gates merge on: typecheck, lint, unit tests, end-to-end tests, and a Lighthou
 | `feat:` | minor |
 | `!` / `BREAKING CHANGE:` | major |
 
-**Merging does not deploy. Tags deploy.**
+**Merging does not deploy. Publishing a release deploys.**
 
 - Every PR gets a Netlify Deploy Preview at its own URL.
-- Automatic production publishing is disabled on Netlify.
-- Pushing a `v*` tag triggers the production deploy.
-- Rollback is republishing the previous Netlify deploy — no rebuild, no revert commit.
+- Automatic production publishing is **disabled in the Netlify site settings**. No file in this
+  repository can enforce that — it is a setting in Netlify, and it is what makes everything else in
+  this section true. If it is ever switched back on, merging silently becomes deploying.
+- **Publishing a GitHub Release** creates the `v*` tag and triggers the production deploy.
+- Rollback is republishing the previous Netlify deploy — seconds, no rebuild, no revert commit.
 
-Because production is gated at the tag rather than at PR review, **`main` may contain code that has
-not been reviewed by the project owner**, and changes bundle between tags. That is a deliberate
-trade: owner attention goes on running software rather than on diffs. The consequence to accept is
-that when something breaks after a release, the suspect list is a batch rather than a single PR.
+### Release notes
+
+**There is no `CHANGELOG.md`, and there will not be one.** GitHub Releases is the record: every
+version, dated, with notes, linked to its exact commits and diff. A changelog file duplicates
+something the host already stores and renders better, goes stale, and causes merge conflicts on
+every parallel change.
+
+Notes are generated from merged pull requests and grouped under headings by `.github/release.yml`.
+
+**GitHub groups by pull request label, not by commit message.** It cannot infer a heading from a
+`feat:` prefix. Every PR therefore carries a label matching its commit type:
+
+| Label | Commit types |
+|---|---|
+| `feature` | `feat` |
+| `fix` | `fix`, `perf` |
+| `chore` | `chore`, `refactor` |
+| `docs` | `docs` |
+| `ci` | `ci`, `test` |
+| `deps` | dependency bumps |
+
+A missing label is not a failure — the PR simply falls into an "Other" group in the generated notes.
+
+### An accepted consequence
+
+Because production is gated at the release rather than at PR review, **`main` may contain code that
+has not been reviewed by the project owner**, and changes bundle between releases. That is a
+deliberate trade: owner attention goes on running software rather than on diffs. The consequence to
+accept is that when something breaks after a release, the suspect list is a batch rather than a
+single PR. Deploy Previews are the mitigation — every change is viewable before it merges.
 
 ---
 
@@ -185,3 +219,5 @@ that when something breaks after a release, the suspect list is a batch rather t
 - **Every ADR records the reasoning, the risks knowingly accepted, and the tripwire that should make
   us revisit.** A decision without its reasoning has to be re-derived by whoever finds it next.
 - Operational procedures live in `docs/RUNBOOK.md`: deploy, roll back, restore, rotate secrets.
+- **Release history is not a file.** It lives in GitHub Releases, generated from what actually
+  merged, and tied to the tag that actually deployed. Do not add a changelog to this repository.
