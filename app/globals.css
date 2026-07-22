@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — "warm and human".
+ *
+ * The person choosing a child care center is an anxious parent, usually on a phone,
+ * comparing three centers. They are not looking for fun; they are looking for evidence
+ * their child will be safe and known. Calm competence reads as trustworthy. The
+ * saturated primaries and cartoon suns that most childcare sites reach for read as
+ * generic, and generic is what a worried parent scrolls past.
+ *
+ * So the palette is deliberate, not a default:
+ *
+ *   - A warm off-white base. Never pure white — white is clinical, and this is a place
+ *     a child spends nine hours a day.
+ *   - Warm neutrals for surfaces and text. Even the near-black is warm.
+ *   - ONE accent: sage. Grounded, quiet, unmistakably not a primary. Every call to
+ *     action on the site is sage, so a parent never has to work out what is clickable.
+ *   - Terracotta for warmth only — a rule, an eyebrow, a highlight. NEVER on a control.
+ *     The moment terracotta appears on a button, the site has two accents and the
+ *     single-accent rule that makes calls to action obvious is gone.
+ *
+ * There is no dark mode and no `prefers-color-scheme` block. A marketing site of this
+ * size ships one considered palette rather than two half-considered ones, and the whole
+ * point of these colors is warmth that a dark inversion does not preserve.
+ *
+ * Contrast: sage-700 and ink-700 or darker on the cream base clear WCAG AA for body
+ * text; sage-700 with cream-50 text clears AA for buttons. Lighter steps are for
+ * surfaces, borders, and large display type only.
+ */
+
+@theme {
+  /* Base — warm off-white through to a card surface */
+  --color-cream-50: #fdfbf7;
+  --color-cream-100: #f8f3ea;
+  --color-cream-200: #efe7d9;
+  --color-cream-300: #e0d4c0;
+
+  /* Ink — warm neutrals, never a cold grey */
+  --color-ink-900: #241f1a;
+  --color-ink-700: #4a4139;
+  --color-ink-500: #6f655a;
+  --color-ink-300: #a1968a;
+
+  /* Sage — the single accent. Every call to action. */
+  --color-sage-50: #eef2ed;
+  --color-sage-200: #c4d2c3;
+  --color-sage-500: #5f7d64;
+  --color-sage-700: #415b48;
+  --color-sage-900: #2b3d30;
+
+  /* Terracotta — warmth, sparingly. Never on a control. */
+  --color-terracotta-100: #f6e3d8;
+  --color-terracotta-500: #b8623c;
+  --color-terracotta-700: #8f4728;
+
+  /* Semantic aliases — components use these, not the raw ramps above */
+  --color-background: var(--color-cream-50);
+  --color-surface: var(--color-cream-100);
+  --color-border: var(--color-cream-300);
+  --color-foreground: var(--color-ink-900);
+  --color-muted: var(--color-ink-500);
+  --color-accent: var(--color-sage-700);
+  --color-accent-hover: var(--color-sage-900);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

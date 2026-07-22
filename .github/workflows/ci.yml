@@ -1,0 +1,39 @@
+name: CI
+
+# Gates the merge. Playwright joins this list with the home page, and the row-level
+# security suite joins it with the Supabase schema at v0.3.0.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm run format:check
+
+      # Production build, not `next dev` — a change that only breaks when prerendered
+      # should fail here rather than on the Netlify deploy.
+      - run: npm run build

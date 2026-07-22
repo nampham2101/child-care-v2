@@ -1,0 +1,11 @@
+.next/
+out/
+build/
+coverage/
+.claude/
+next-env.d.ts
+package-lock.json
+
+# Prose is hand-wrapped at 100 columns and hand-aligned in tables. Prettier reflows both,
+# which turns every documentation edit into a diff nobody can read.
+*.md

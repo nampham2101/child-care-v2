@@ -1,0 +1,22 @@
+# Netlify build configuration.
+#
+# The Next.js runtime (@netlify/plugin-nextjs) is installed by Netlify automatically when
+# it detects Next.js, so it is not declared here. `.next` is the publish directory that
+# runtime expects.
+#
+# WHAT THIS FILE CANNOT DO: production publishing is disabled in the Netlify UI
+# (Deploys → Lock, which Netlify labels "stop auto publishing"), not here. No setting in
+# this repository can enforce it. That lock is the only reason "merging does not deploy"
+# is true — publishing a GitHub Release is what deploys. If the lock is ever released,
+# merging to main silently becomes deploying to production.
+#
+# Deploy Previews stay enabled: every pull request gets its own URL, which is how a
+# change is reviewed on a real phone before it merges.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Matches .nvmrc and CI, so a build failure is never a Node version difference.
+  NODE_VERSION = "24"
