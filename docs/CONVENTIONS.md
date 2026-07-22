@@ -1,0 +1,187 @@
+# Conventions
+
+How this repository is organized, named, committed, reviewed, and released.
+
+These conventions exist **before** the code they govern. When a convention here turns out to be
+wrong or unworkable, change this document in the same PR that departs from it — do not let the code
+and this file drift apart silently.
+
+---
+
+## Repository layout
+
+Planned structure. Directories appear as the work that needs them lands; the shape is fixed now so
+files do not end up improvised into place.
+
+```
+app/                      Next.js App Router
+  [locale]/               Public, locale-prefixed pages
+  admin/                  Staff-only admin area
+lib/                      Shared logic — the single home for anything used twice
+  supabase/               Database client, typed queries
+  content/                Content fetching and mapping
+components/
+  ui/                     Primitives (button, input, dialog)
+  site/                   Public site components
+  admin/                  Admin-only components
+messages/                 i18n message catalogues, one file per locale
+supabase/migrations/      SQL migrations, applied in order
+docs/                     This directory
+  adr/                    Architecture decision records
+tests/
+  e2e/                    Playwright
+```
+
+**Shared logic lives in one place.** If a helper is needed in two places, it moves to `lib/` in the
+same commit that creates the second use. Duplicated helpers are how silent drift bugs happen — a
+copy gets fixed and the original does not.
+
+---
+
+## Naming
+
+Codify what the codebase already does. These are the starting rules; when a real pattern emerges
+that contradicts one, update this section rather than mixing two systems.
+
+| Thing | Convention | Example |
+|---|---|---|
+| Directories | kebab-case | `page-blocks/` |
+| React components | PascalCase file and export | `StaffCard.tsx` |
+| Non-component modules | kebab-case | `format-date.ts` |
+| Functions and variables | camelCase | `getPublishedPages` |
+| Types and interfaces | PascalCase, no `I` prefix | `StaffMember` |
+| Constants | SCREAMING_SNAKE_CASE | `DEFAULT_LOCALE` |
+| Database tables | plural snake_case | `page_blocks` |
+| Database columns | singular snake_case | `published_at` |
+| Booleans | `is` / `has` / `can` prefix | `isPublished` |
+| Environment variables | SCREAMING_SNAKE_CASE | `SUPABASE_SERVICE_ROLE_KEY` |
+| Test files | mirror source, `.test.ts` | `format-date.test.ts` |
+
+Avoid abbreviations that are not already universal in this domain. `organization` not `org` in
+prose; `org_id` is acceptable in the schema because it is the established column convention.
+
+---
+
+## Code style
+
+- **TypeScript everywhere.** No `.js` source files. `strict` mode on. No `any` — use `unknown` and
+  narrow it.
+- **Formatting is not a matter of opinion.** Prettier and ESLint run in CI; do not hand-format.
+- **Server-first.** Prefer React Server Components. Add `"use client"` only where interactivity
+  genuinely requires it, and push it as far down the tree as possible.
+- **Comments explain why, not what.** Match the surrounding density. If a comment restates the code,
+  delete it.
+- **No secrets in code, ever.** They live in environment variables. The Supabase service-role key is
+  server-side only and must never reach a browser bundle.
+
+---
+
+## Commits
+
+**Conventional Commits**, so that changelogs and version bumps derive from history rather than
+being maintained by hand.
+
+```
+type(scope): subject
+```
+
+- Subject: imperative mood, lowercase, no trailing period. "add staff bio editor", not "Added...".
+- **Types:** `feat` `fix` `docs` `test` `refactor` `perf` `ci` `chore`
+- **Scopes:** `site` `admin` `db` `auth` `content` `seo` `i18n` `ci` `deps` `docs`
+- Breaking changes: `!` after the scope (`feat(db)!: ...`) plus a `BREAKING CHANGE:` footer.
+
+Scope may be omitted when a change genuinely spans the repo. Reaching for that regularly is a sign
+the commit is doing too much.
+
+---
+
+## Branches and pull requests
+
+Trunk-based. Short-lived branches off `main`, named `type/short-description` — `feat/staff-editor`,
+`fix/mobile-nav-overflow`.
+
+### A PR does one thing
+
+When something fixable turns up that is outside the assigned task:
+
+| What you find | What you do |
+|---|---|
+| Blocks the assigned task | Fix it in the same PR, call it out in the description |
+| Trivial, in code you are already editing | Fix it, mention it in the PR |
+| Anything else | **File an issue.** Do not touch the code. |
+| Security or data-loss risk | **Stop and raise it immediately.** Never file it in a queue. |
+
+The principle: **nothing silently dropped, nothing silently smuggled in.** Every finding becomes a
+visible PR line or a readable issue. This is not tidiness — review is the quality gate and a release
+tag is the rollback unit, and both break when PRs carry unrelated cargo.
+
+### PR descriptions
+
+Written for someone who never saw the ticket. What changed, why, how it was verified, and anything
+deliberately left out. This is the audit trail.
+
+### Self-review checklist
+
+Every PR is self-reviewed against this before merge:
+
+- [ ] Does one thing; unrelated findings are filed as issues, not fixed here
+- [ ] Description explains the change to someone without context
+- [ ] No secrets, keys, or credentials added
+- [ ] No service-role database access reachable from client code
+- [ ] Row-level security still enforced for any new table or column
+- [ ] Shared logic extracted rather than duplicated
+- [ ] Tests cover the real user path, not just a convenient trigger
+- [ ] Conventions in this file still hold, or are updated in this PR
+- [ ] Deploy Preview checked on a real phone for any visual change
+
+Self-review reliably catches slips — typos, missing error handling, forgotten edge cases. It does
+not catch the author's own design blind spots. Deploy Previews and the release gate cover that.
+
+---
+
+## Testing
+
+- **Unit tests** (Vitest) for pure logic: formatting, mapping, validation.
+- **End-to-end tests** (Playwright) for user journeys, run against a **cold first-time page load** —
+  no logged-in state, no warm cache. That is how every visitor actually arrives, and testing a
+  convenient trigger instead has hidden real bugs before.
+- **Row-level security tests** are mandatory for every new table: assert an anonymous client cannot
+  read unpublished rows and cannot read another organization's rows.
+- **Tests before big refactors.** Load-bearing logic is never rewritten without a safety net first.
+
+CI gates merge on: typecheck, lint, unit tests, end-to-end tests, and a Lighthouse budget.
+
+---
+
+## Releases
+
+**Semantic versioning**, derived from commit history:
+
+| Commit type | Version bump |
+|---|---|
+| `fix:` | patch |
+| `feat:` | minor |
+| `!` / `BREAKING CHANGE:` | major |
+
+**Merging does not deploy. Tags deploy.**
+
+- Every PR gets a Netlify Deploy Preview at its own URL.
+- Automatic production publishing is disabled on Netlify.
+- Pushing a `v*` tag triggers the production deploy.
+- Rollback is republishing the previous Netlify deploy — no rebuild, no revert commit.
+
+Because production is gated at the tag rather than at PR review, **`main` may contain code that has
+not been reviewed by the project owner**, and changes bundle between tags. That is a deliberate
+trade: owner attention goes on running software rather than on diffs. The consequence to accept is
+that when something breaks after a release, the suspect list is a batch rather than a single PR.
+
+---
+
+## Documentation
+
+- Documentation precedes the code it governs.
+- Decisions with trade-offs get an ADR in `docs/adr/`, numbered and never rewritten after the fact —
+  superseded ADRs are marked superseded and kept.
+- **Every ADR records the reasoning, the risks knowingly accepted, and the tripwire that should make
+  us revisit.** A decision without its reasoning has to be re-derived by whoever finds it next.
+- Operational procedures live in `docs/RUNBOOK.md`: deploy, roll back, restore, rotate secrets.
