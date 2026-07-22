@@ -5,7 +5,8 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 
 **Repository:** `nampham2101/child-care-v2` (private)
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** documentation only. No application code exists yet. This is deliberate.
+**Current state:** scaffold. The app typechecks, lints, builds, and prerenders `/` as static, but `/`
+is a placeholder — there is no website yet.
 
 ---
 

@@ -3,9 +3,9 @@
 Marketing website for a child care center, with a small admin area so center staff can update
 content themselves.
 
-> **Status: foundations.** No application code yet. This commit establishes the repo's conventions
-> before the code they govern exists. See [`docs/PLAN.md`](docs/PLAN.md) for what is being built —
-> that document is a **draft under discussion**, not a settled plan.
+> **Status: scaffold.** The app builds and deploys, but there is no website yet — `/` is a
+> placeholder, replaced by the home page in the next change. See [`docs/PLAN.md`](docs/PLAN.md) for
+> what is being built.
 
 ## What this is
 
@@ -26,18 +26,26 @@ visitor's request path — it is read at build time and written only from the ad
 | Styling | Tailwind CSS |
 | Testing | Vitest (unit), Playwright (end-to-end) |
 
-Exact versions are pinned in `package.json` once the app is scaffolded.
+Exact versions are resolved in `package-lock.json`, which is committed — CI and Netlify install
+from it, so a build is never a different dependency tree than the one that was tested.
 
 ## Local development
-
-Not yet applicable — there is no application to run. Once scaffolded:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Requires Node 20+ (developed on Node 24). Netlify platform features run locally via `netlify dev`.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server on <http://localhost:3000> |
+| `npm run build` | Production build — what CI and Netlify run |
+| `npm run typecheck` | TypeScript, no emit |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier, writing changes (`format:check` to only report) |
+
+Node version is pinned in `.nvmrc` and read from there by CI and Netlify, so there is one place to
+change it. Netlify platform features run locally via `netlify dev`.
 
 ## Documentation
 
