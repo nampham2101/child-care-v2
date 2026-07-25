@@ -65,9 +65,14 @@ operations platform is built on.
 
 ## Architecture
 
-**The public website is a pile of static files. The database is never in a visitor's request path.**
+**The public website is prerendered at build time and served from cache — through the Next.js
+runtime, not as files picked off the CDN. The database is never in a visitor's request path.**
 
-- **Public pages** are generated at build time into plain HTML and served from Netlify's CDN.
+- **Public pages** are prerendered at build time and served from a durable cache by the Netlify
+  Next.js runtime — a single `___netlify-server-handler` function behind a `/*` redirect, returning
+  `cache-status: "Next.js"; hit`. To a visitor it is CDN-fast; it is not literally a static file
+  read, and a warm-cache handler invocation is effectively free here (but not zero, the way a CDN
+  file read is).
 - **The admin area** (`/admin/*`) is server-rendered and talks to Supabase live. Only staff reach it.
 - When staff press **Publish**, the app calls a **Netlify build hook**, the site rebuilds, and
   Netlify swaps in the new deploy — roughly 1–2 minutes end to end.
@@ -80,9 +85,10 @@ instantly.
 
 What it buys:
 
-- **Speed and SEO** — static HTML from a CDN is the fastest thing to serve, and for a local business
-  page speed is both a ranking input and a bounce-rate input.
-- **Resilience** — if Supabase is paused or down, the public site is unaffected. Only the admin is.
+- **Speed and SEO** — prerendered HTML from a warm durable cache serves about as fast as a CDN file,
+  and for a local business page speed is both a ranking input and a bounce-rate input.
+- **Resilience** — if Supabase is paused or down, the public site is unaffected: the handler serves
+  prerendered pages from cache and never touches the database. Only the admin is.
 - **Rollback** — every Netlify deploy stays permanently addressable, so reverting is republishing a
   previous deploy: seconds, no rebuild.
 - **Safety** — no public request path into the database is a much smaller attack surface.
