@@ -278,7 +278,9 @@ Then: publish GitHub Release `v0.1.0` → production deploys.
   the ticket.
 - CI gates the merge: typecheck, lint, build, Playwright.
 - Every PR gets a **Netlify Deploy Preview** at its own URL.
-- Merging to `main` **does not deploy.** Netlify's automatic production publishing is disabled.
+- Merging to `main` **does not deploy.** `main` is not Netlify's production branch — that is a
+  placeholder branch that never receives commits — so a merge to `main` is only a non-production
+  branch deploy. The site is intentionally unlocked so the release workflow can publish via the CLI.
 - **Publishing a GitHub Release** creates the tag and fires the production deploy.
 
 **Rollback** is republishing the previous Netlify deploy — seconds, no rebuild, no revert commit.
@@ -312,9 +314,9 @@ mitigation — every change is viewable before it merges.
 | Task | Status |
 |---|---|
 | Netlify account | **Done** |
-| Netlify site created and connected to the repo | Outstanding |
-| Netlify automatic production publishing **disabled** | Outstanding — until this is off, "merging does not deploy" is a claim, not a guarantee |
-| Netlify auth token + site ID added to GitHub Actions secrets | Outstanding |
+| Netlify site created and connected to the repo | **Done** |
+| Production gated to releases: site unlocked, production branch a placeholder, `main` a branch deploy | **Done** |
+| `NETLIFY_AUTH_TOKEN` secret + `NETLIFY_SITE_ID` variable in GitHub Actions | **Done** |
 | Supabase project created | Not needed until `v0.3.0` |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |

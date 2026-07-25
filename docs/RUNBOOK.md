@@ -9,13 +9,17 @@ file is the *how* — the steps to run when it is time to act.
 
 ## How deploys work
 
-- Merging to `main` **does not deploy.** Netlify's automatic production publishing is locked
-  ("Stop auto publishing" in the Netlify UI).
+- Merging to `main` **does not deploy to production.** `main` is not Netlify's production branch —
+  the production branch is a placeholder (`release-prod`) that never receives commits, so a merge to
+  `main` produces only a non-production **branch deploy** (`main--child-care-v2.netlify.app`). PRs
+  still get Deploy Previews.
+- The site is intentionally **unlocked** (auto publishing on). This is required: a production lock
+  ("stop auto publishing") blocks the release workflow's CLI `--prod` too, not just git auto-deploys.
 - **Publishing a GitHub Release** is the only thing that deploys to production. It runs
   [`.github/workflows/release.yml`](../.github/workflows/release.yml), which re-runs the CI gate
-  and then `netlify deploy --build --prod` — the `--build` runs the Next.js runtime plugin, and
-  the explicit `--prod` publish is not held back by the auto-publish lock.
-- **Rollback** is republishing a previous Netlify deploy — seconds, no rebuild, no revert commit.
+  and then `netlify deploy --build --prod` — `--build` runs the Next.js runtime plugin, and `--prod`
+  publishes to production.
+- **Rollback** is republishing a previous production deploy — seconds, no rebuild, no revert commit.
 
 ### One-time prerequisites (owner)
 
@@ -24,8 +28,11 @@ file is the *how* — the steps to run when it is time to act.
    - `NETLIFY_SITE_ID` — the site's API ID (Netlify → Site configuration → General). Add under
      **Variables**, not Secrets — a site ID is a non-sensitive identifier, and the release
      workflow reads it from `vars`.
-2. Netlify → Deploys → confirm auto publishing is **stopped/locked**. Until it is, merging to
-   `main` deploys, and "merging does not deploy" is a claim rather than a guarantee.
+2. Netlify → Site configuration → Build & deploy → **Branches and deploy contexts**: set the
+   production branch to a placeholder that is never pushed (`release-prod`), add `main` as a branch
+   deploy (so PRs against `main` still get Deploy Previews), and keep Deploy Previews on.
+3. Netlify → Deploys → make sure the site is **unlocked** (auto publishing on), so the release
+   workflow's `--prod` can publish.
 
 ---
 
@@ -47,7 +54,7 @@ file is the *how* — the steps to run when it is time to act.
 
 1. Netlify dashboard → the site → **Deploys**.
 2. Open the last known-good deploy → **Publish deploy**.
-3. Production serves it within seconds. The auto-publish lock keeps it there.
+3. Production serves it within seconds — no rebuild, no revert commit.
 4. Follow up: land a `fix` (or revert) PR and cut a new patch release so `main` matches
    production again.
 
