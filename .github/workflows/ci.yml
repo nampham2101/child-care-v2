@@ -37,3 +37,10 @@ jobs:
       # Production build, not `next dev` — a change that only breaks when prerendered
       # should fail here rather than on the Netlify deploy.
       - run: npm run build
+
+      # End-to-end tests run against that production build (Playwright's webServer starts
+      # `next start`), so the cold-load test exercises the same artefact Netlify publishes.
+      # Only the browser the tests use is installed, to keep the job lean.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
