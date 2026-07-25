@@ -1,8 +1,9 @@
 name: Release
 
 # Publishing a GitHub Release is the ONLY thing that deploys to production. Merging to
-# main does not deploy — Netlify's automatic production publishing is locked in the site
-# settings, and this workflow's explicit `netlify deploy --prod` is what actually ships.
+# main does not deploy because main is not Netlify's production branch (that is a
+# placeholder that never receives commits); this workflow's explicit `netlify deploy --prod`
+# against the unlocked site is what actually ships.
 #
 # `workflow_dispatch` with `dry_run` exists so the pipeline can be proven without touching
 # production: a dry run produces a draft deploy at its own URL and leaves the live site
@@ -49,9 +50,9 @@ jobs:
       # `--build` runs `netlify build`, which executes @netlify/plugin-nextjs (declared in
       # netlify.toml) and produces the serverless/edge output. A plain `deploy --dir=.next`
       # would skip the plugin and break SSR and routing. `--prod` publishes that build as
-      # the production deploy; a manual CLI publish is explicit and is NOT held back by the
-      # "stop auto publishing" lock, which only suppresses auto-publish of git-triggered
-      # builds. A dry run drops `--prod`, producing a draft deploy that leaves prod alone.
+      # the production deploy. The site must be UNLOCKED for this to publish — a production
+      # lock ("stop auto publishing") blocks CLI `--prod` too, not just git auto-deploys.
+      # A dry run drops `--prod`, producing a draft deploy that leaves prod alone.
       - name: Deploy to Netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

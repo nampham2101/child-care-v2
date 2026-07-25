@@ -172,9 +172,10 @@ meaningful to run is theatre — this line moves when the tests do, in the same 
 **Merging does not deploy. Publishing a release deploys.**
 
 - Every PR gets a Netlify Deploy Preview at its own URL.
-- Automatic production publishing is **disabled in the Netlify site settings**. No file in this
-  repository can enforce that — it is a setting in Netlify, and it is what makes everything else in
-  this section true. If it is ever switched back on, merging silently becomes deploying.
+- Production deploys are gated to releases by Netlify **site configuration**, not a repository
+  file: the production branch is a placeholder that never receives commits, so merging to `main`
+  produces only a non-production branch deploy. The site is intentionally unlocked, because a
+  production lock would block the release workflow's `netlify deploy --build --prod` as well.
 - **Publishing a GitHub Release** creates the `v*` tag and triggers the production deploy.
 - Rollback is republishing the previous Netlify deploy — seconds, no rebuild, no revert commit.
 

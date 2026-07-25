@@ -7,11 +7,12 @@
 # Declaring it here also pins the version, so a runtime release cannot change how the site
 # builds without a commit saying so.
 #
-# WHAT THIS FILE CANNOT DO: production publishing is disabled in the Netlify UI
-# (Deploys → Lock, which Netlify labels "stop auto publishing"), not here. No setting in
-# this repository can enforce it. That lock is the only reason "merging does not deploy"
-# is true — publishing a GitHub Release is what deploys. If the lock is ever released,
-# merging to main silently becomes deploying to production.
+# WHAT THIS FILE CANNOT DO: it cannot gate production. What keeps "merging does not deploy"
+# true is Netlify site configuration, not this file — the production branch is set to a
+# placeholder that never receives commits, so `main` is only ever a branch deploy. The site
+# itself is intentionally UNLOCKED (auto-publishing on): that is required, because a
+# production lock ("stop auto publishing") blocks the release workflow's CLI `--prod` too,
+# not just git auto-deploys. Publishing a GitHub Release is what deploys. See docs/RUNBOOK.md.
 #
 # Deploy Previews stay enabled: every pull request gets its own URL, which is how a
 # change is reviewed on a real phone before it merges.
