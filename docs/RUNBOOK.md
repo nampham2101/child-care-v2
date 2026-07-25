@@ -20,8 +20,10 @@ file is the *how* — the steps to run when it is time to act.
 ### One-time prerequisites (owner)
 
 1. Repo → Settings → Secrets and variables → Actions → add:
-   - `NETLIFY_AUTH_TOKEN` — a Netlify personal access token.
-   - `NETLIFY_SITE_ID` — the site's API ID (Netlify → Site configuration → General).
+   - `NETLIFY_AUTH_TOKEN` — a Netlify personal access token. Add under **Secrets**.
+   - `NETLIFY_SITE_ID` — the site's API ID (Netlify → Site configuration → General). Add under
+     **Variables**, not Secrets — a site ID is a non-sensitive identifier, and the release
+     workflow reads it from `vars`.
 2. Netlify → Deploys → confirm auto publishing is **stopped/locked**. Until it is, merging to
    `main` deploys, and "merging does not deploy" is a claim rather than a guarantee.
 
