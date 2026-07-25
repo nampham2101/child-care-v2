@@ -6,6 +6,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Lets the release workflow reuse this exact gate before a production deploy,
+  # so a release verifies the commit it ships rather than trusting main's HEAD.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}
