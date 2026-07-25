@@ -8,8 +8,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Child Care Center",
-  description: "Marketing website for a child care center.",
+  title: "Willow Grove Children's Center · Licensed child care in NW Portland",
+  description:
+    "A small, licensed child care center in Northwest Portland for ages 6 weeks to 5 years, where the same caregivers know your child by name. Call to plan a visit.",
 };
 
 export default function RootLayout({
