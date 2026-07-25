@@ -1,0 +1,29 @@
+# Groups GitHub's auto-generated release notes by PR label. GitHub groups by LABEL, not by
+# commit message — it cannot infer a heading from a `feat:` prefix — so every PR carries a
+# label matching its Conventional Commit type. This mapping mirrors docs/CONVENTIONS.md.
+#
+# Categories are matched top-to-bottom; each PR lands in the first category it matches, so
+# the `"*"` catch-all must stay last.
+changelog:
+  categories:
+    - title: Features
+      labels:
+        - feature
+    - title: Fixes
+      labels:
+        - fix
+    - title: Chores
+      labels:
+        - chore
+    - title: Docs
+      labels:
+        - docs
+    - title: CI/Tests
+      labels:
+        - ci
+    - title: Dependencies
+      labels:
+        - deps
+    - title: Other
+      labels:
+        - "*"

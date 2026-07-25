@@ -1,0 +1,67 @@
+name: Release
+
+# Publishing a GitHub Release is the ONLY thing that deploys to production. Merging to
+# main does not deploy — Netlify's automatic production publishing is locked in the site
+# settings, and this workflow's explicit `netlify deploy --prod` is what actually ships.
+#
+# `workflow_dispatch` with `dry_run` exists so the pipeline can be proven without touching
+# production: a dry run produces a draft deploy at its own URL and leaves the live site
+# alone. See docs/RUNBOOK.md.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Draft deploy only — does NOT publish to production"
+        type: boolean
+        default: true
+
+# Never let two production deploys race, and never cancel one already in flight.
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Re-run the same gate main was checked against. Production has exactly one path and
+  # releases are infrequent, so verifying the exact commit being shipped is cheap
+  # insurance — the tagged commit is not guaranteed to equal a freshly-gated main HEAD.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Netlify production
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # `--build` runs `netlify build`, which executes @netlify/plugin-nextjs (declared in
+      # netlify.toml) and produces the serverless/edge output. A plain `deploy --dir=.next`
+      # would skip the plugin and break SSR and routing. `--prod` publishes that build as
+      # the production deploy; a manual CLI publish is explicit and is NOT held back by the
+      # "stop auto publishing" lock, which only suppresses auto-publish of git-triggered
+      # builds. A dry run drops `--prod`, producing a draft deploy that leaves prod alone.
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Dry run — draft deploy, production pointer untouched."
+            npx --yes netlify-cli@26.2.0 deploy --build \
+              --message "Dry run ${{ github.sha }}"
+          else
+            npx --yes netlify-cli@26.2.0 deploy --build --prod \
+              --message "Release ${{ github.event.release.tag_name || github.sha }}"
+          fi
