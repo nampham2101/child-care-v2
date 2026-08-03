@@ -11,6 +11,41 @@
     "faq": "FAQ",
     "contact": "Contact"
   },
+  "Programs": {
+    "infants": "Infants",
+    "toddlers": "Toddlers",
+    "preschool": "Preschool"
+  },
+  "Day": {
+    "arrival": "Arrival and free play",
+    "breakfast": "Breakfast, then morning circle",
+    "centers": "Learning centers and outdoor time",
+    "lunch": "Lunch, made on site",
+    "nap": "Nap and quiet rest",
+    "snack": "Snack and afternoon projects",
+    "pickup": "Outdoor play until pickup"
+  },
+  "ProgramsPage": {
+    "metaTitle": "Programs",
+    "metaDescription": "Infant, toddler, and preschool rooms in Northwest Portland — ratios, group sizes, and what a day actually looks like in each room.",
+    "eyebrow": "Ages {ageRange}",
+    "heading": "Programs by age",
+    "intro": "Three rooms in one building, and the same faces from the infant room to the morning your child leaves for kindergarten. Here is who is in each room, how many children they care for, and what the day holds.",
+    "factRatio": "Ratio",
+    "factGroup": "Group size",
+    "factAges": "Ages",
+    "infantsDetail": "Every baby is assigned one primary caregiver who handles their feeds, naps, and nappies. That is the person who learns that your daughter will only go down holding the blue elephant, and the person who tells you about it at pickup.",
+    "infantsStaffing": "Feeds and sleep follow your baby's schedule, not the room's. You get the day written down — every bottle, every nap, every nappy — before you reach the car park.",
+    "toddlersDetail": "The year a child learns that the world has an order to it. Days are deliberately predictable, so a toddler who cannot yet tell time can still tell what comes next, and the language never stops — naming, narrating, asking.",
+    "toddlersStaffing": "Two teachers stay with this room all year. Toilet learning happens on your child's timeline and in step with what you are doing at home, never on a deadline we set.",
+    "preschoolDetail": "Early literacy and numbers, and the harder curriculum underneath them — taking turns, waiting, saying what you feel instead of throwing something. This is the groundwork kindergarten expects a child to arrive with.",
+    "preschoolStaffing": "Small-group work every morning, led by a teacher who has taught this room for years. In the spring we write to your child's kindergarten so their first teacher starts already knowing them.",
+    "dayHeading": "A day at Willow Grove",
+    "dayBody": "Every room runs on the same rhythm, scaled to the age. Infants sleep and eat on their own schedule inside it; older children move through it together.",
+    "visitHeading": "Not sure which room fits?",
+    "visitBody": "Call the office and ask for Maria. She will tell you plainly which rooms have space and what the wait looks like for the ones that do not — and you are welcome to come and stand in the room your child would actually be in.",
+    "visitAria": "Plan a visit"
+  },
   "HomePage": {
     "heroEyebrow": "Licensed child care · Ages {ageRange}",
     "heroHeading": "A place where your child is known by name.",
