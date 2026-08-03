@@ -1,3 +1,4 @@
+import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -5,4 +6,7 @@ const nextConfig: NextConfig = {
   // is needed. Nothing to configure while every asset is local.
 };
 
-export default nextConfig;
+// Wires next-intl into the build. With no argument it reads `./i18n/request.ts`.
+const withNextIntl = createNextIntlPlugin();
+
+export default withNextIntl(nextConfig);

@@ -1,13 +1,19 @@
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
 import { CENTER } from "@/lib/center";
 
 /**
- * The home page — the single page v0.1.0 ships.
+ * The home page — the single page v0.1.0 shipped, now living under `/[locale]`.
  *
  * Written for one reader: an anxious parent comparing centers late at night on a phone.
  * Every section answers a question that parent is actually asking, in the order they ask
  * it. The page is built mobile-first; the `sm:` and `lg:` steps only widen a layout that
  * already works in a narrow column.
+ *
+ * Its prose comes from `messages/en.json` via next-intl; the structured lists below stay
+ * in code because they interleave translatable copy with pure facts (ratios, clock times)
+ * and proper nouns — extracting them cleanly belongs with the tickets that own that
+ * content (programs, staff), not this routing change.
  *
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
@@ -78,7 +84,17 @@ function initialsOf(name: string) {
     .join("");
 }
 
-export default function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations("HomePage");
+  const tFooter = await getTranslations("Footer");
+
   return (
     <>
       {/* Header — sticky so the tap-to-call button never scrolls away. */}
@@ -95,18 +111,16 @@ export default function Home() {
         {/* Hero — a promise about your child, not a claim about the business. */}
         <section className="py-14 sm:py-20" aria-labelledby="hero-heading">
           <p className="text-sm font-medium tracking-wide text-terracotta-700 uppercase">
-            Licensed child care · Ages {CENTER.ageRange}
+            {t("heroEyebrow", { ageRange: CENTER.ageRange })}
           </p>
           <h1
             id="hero-heading"
             className="mt-3 max-w-2xl text-4xl font-semibold text-balance text-ink-900 sm:text-5xl"
           >
-            A place where your child is known by name.
+            {t("heroHeading")}
           </h1>
           <p className="mt-4 max-w-xl text-lg text-ink-700">
-            A small, licensed center in {CENTER.neighborhood}, where the same
-            caregivers greet your child every morning and can tell you exactly
-            how their day went.
+            {t("heroBody", { neighborhood: CENTER.neighborhood })}
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-4">
             <CallButton />
@@ -114,7 +128,7 @@ export default function Home() {
               href="#visit"
               className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:border-ink-300 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
             >
-              Plan a visit
+              {t("planVisit")}
             </a>
           </div>
         </section>
@@ -125,10 +139,10 @@ export default function Home() {
           className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4"
         >
           {[
-            { value: CENTER.infantRatio, label: "Infant ratio" },
-            { value: `${yearsOperating} years`, label: "Caring for families" },
-            { value: "7am–6pm", label: "Open weekdays" },
-            { value: CENTER.licenseNumber, label: "State license" },
+            { value: CENTER.infantRatio, label: t("trustInfantRatio") },
+            { value: `${yearsOperating} years`, label: t("trustYearsCaring") },
+            { value: "7am–6pm", label: t("trustOpenWeekdays") },
+            { value: CENTER.licenseNumber, label: t("trustStateLicense") },
           ].map((stat) => (
             <div key={stat.label} className="bg-surface px-5 py-6">
               <div className="text-2xl font-semibold text-ink-900 tabular-nums">
@@ -145,7 +159,7 @@ export default function Home() {
             id="programs-heading"
             className="text-2xl font-semibold text-ink-900 sm:text-3xl"
           >
-            Programs by age
+            {t("programsHeading")}
           </h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {PROGRAMS.map((program) => (
@@ -177,12 +191,9 @@ export default function Home() {
             id="day-heading"
             className="text-2xl font-semibold text-ink-900 sm:text-3xl"
           >
-            A day at Willow Grove
+            {t("dayHeading")}
           </h2>
-          <p className="mt-2 max-w-xl text-ink-700">
-            Predictable rhythm, room to be a kid. Here is what nine hours
-            actually looks like.
-          </p>
+          <p className="mt-2 max-w-xl text-ink-700">{t("dayBody")}</p>
           <ol className="mt-8 max-w-xl">
             {DAY.map((slot) => (
               <li
@@ -207,7 +218,7 @@ export default function Home() {
             id="staff-heading"
             className="text-2xl font-semibold text-ink-900 sm:text-3xl"
           >
-            The people who will know your child
+            {t("staffHeading")}
           </h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-3">
             {STAFF.map((person) => (
@@ -241,16 +252,14 @@ export default function Home() {
           aria-labelledby="parent-heading"
         >
           <h2 id="parent-heading" className="sr-only">
-            From a parent
+            {t("testimonialHeading")}
           </h2>
           <blockquote className="max-w-2xl">
             <p className="text-xl text-ink-900 text-balance sm:text-2xl">
-              “On day three, Aisha told me my daughter only settles for her nap
-              if she can hold the blue elephant. I hadn&apos;t told anyone that.
-              That&apos;s when I stopped worrying.”
+              {t("testimonialQuote")}
             </p>
             <footer className="mt-4 text-sm text-ink-500">
-              Priya R., parent of an infant-room child
+              {t("testimonialAttribution")}
             </footer>
           </blockquote>
         </section>
@@ -265,13 +274,15 @@ export default function Home() {
             id="visit-heading"
             className="text-2xl font-semibold text-ink-900 sm:text-3xl"
           >
-            Come see it for yourself
+            {t("visitHeading")}
           </h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-2">
             <div>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-ink-500">Address</dt>
+                  <dt className="text-sm font-medium text-ink-500">
+                    {t("contactAddress")}
+                  </dt>
                   <dd className="text-ink-900">
                     {CENTER.address.line1}
                     <br />
@@ -279,11 +290,15 @@ export default function Home() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-ink-500">Hours</dt>
+                  <dt className="text-sm font-medium text-ink-500">
+                    {t("contactHours")}
+                  </dt>
                   <dd className="text-ink-900">{CENTER.hoursShort}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-ink-500">Phone</dt>
+                  <dt className="text-sm font-medium text-ink-500">
+                    {t("contactPhone")}
+                  </dt>
                   <dd>
                     <a
                       href={CENTER.phoneHref}
@@ -303,7 +318,7 @@ export default function Home() {
               aria-hidden="true"
               className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-sage-50 text-sm text-sage-700"
             >
-              Map of {CENTER.neighborhood}
+              {t("mapLabel", { neighborhood: CENTER.neighborhood })}
             </div>
           </div>
         </section>
@@ -314,8 +329,11 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-5 py-8 text-sm text-ink-500">
           <p className="font-medium text-ink-700">{CENTER.name}</p>
           <p>
-            Licensed child care facility · State license {CENTER.licenseNumber}{" "}
-            · Serving families since {CENTER.yearsOperatingSince}.
+            {tFooter("tagline", {
+              licenseNumber: CENTER.licenseNumber,
+              // A string, not the raw number — ICU would render 2009 as "2,009".
+              since: String(CENTER.yearsOperatingSince),
+            })}
           </p>
           <p>
             {CENTER.address.line1}, {CENTER.address.line2}

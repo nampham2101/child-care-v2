@@ -1,0 +1,27 @@
+{
+  "HomePage": {
+    "heroEyebrow": "Licensed child care · Ages {ageRange}",
+    "heroHeading": "A place where your child is known by name.",
+    "heroBody": "A small, licensed center in {neighborhood}, where the same caregivers greet your child every morning and can tell you exactly how their day went.",
+    "planVisit": "Plan a visit",
+    "trustInfantRatio": "Infant ratio",
+    "trustYearsCaring": "Caring for families",
+    "trustOpenWeekdays": "Open weekdays",
+    "trustStateLicense": "State license",
+    "programsHeading": "Programs by age",
+    "dayHeading": "A day at Willow Grove",
+    "dayBody": "Predictable rhythm, room to be a kid. Here is what nine hours actually looks like.",
+    "staffHeading": "The people who will know your child",
+    "testimonialHeading": "From a parent",
+    "testimonialQuote": "“On day three, Aisha told me my daughter only settles for her nap if she can hold the blue elephant. I hadn't told anyone that. That's when I stopped worrying.”",
+    "testimonialAttribution": "Priya R., parent of an infant-room child",
+    "visitHeading": "Come see it for yourself",
+    "contactAddress": "Address",
+    "contactHours": "Hours",
+    "contactPhone": "Phone",
+    "mapLabel": "Map of {neighborhood}"
+  },
+  "Footer": {
+    "tagline": "Licensed child care facility · State license {licenseNumber} · Serving families since {since}."
+  }
+}

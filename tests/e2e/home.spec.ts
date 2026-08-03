@@ -7,15 +7,31 @@ import { test, expect } from "@playwright/test";
  * means no warm cache and no logged-in state — the scenario a smoke test on a warm session
  * quietly skips. The assertions check real content that only renders if the page built and
  * prerendered correctly, so an empty or broken page fails here rather than passing green.
+ *
+ * Routes are locale-prefixed (`/en`), and a bare `/` must redirect there — that redirect is
+ * how every first-time visitor reaches the site, so it is tested as its own case, not
+ * assumed.
  */
 test.describe("home page, cold load", () => {
-  test("renders the real page for a first-time visitor on a phone", async ({
+  test("a bare / redirects a first-time visitor to the default locale", async ({
     page,
     context,
   }) => {
     await context.clearCookies();
 
     await page.goto("/", { waitUntil: "load" });
+
+    // The middleware must land the visitor on /en — not leave them on an unlocalized /.
+    await expect(page).toHaveURL(/\/en$/);
+  });
+
+  test("renders the real page for a first-time visitor on a phone", async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    await page.goto("/en", { waitUntil: "load" });
 
     // The hero promise — the page's reason to exist.
     await expect(
@@ -56,7 +72,7 @@ test.describe("home page, cold load", () => {
   });
 
   test("the page title tells a searcher what this is", async ({ page }) => {
-    await page.goto("/", { waitUntil: "load" });
+    await page.goto("/en", { waitUntil: "load" });
     await expect(page).toHaveTitle(/Willow Grove.*Portland/i);
   });
 });
