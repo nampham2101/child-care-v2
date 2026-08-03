@@ -2,8 +2,16 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import {
+  getMessages,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
+import { CallButton } from "@/components/site/CallButton";
+import { SiteNav } from "@/components/site/SiteNav";
+import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { CENTER } from "@/lib/center";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -50,12 +58,49 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   const messages = await getMessages();
+  const tFooter = await getTranslations("Footer");
 
   return (
     <html lang={locale} className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider messages={messages}>
+          {/* Header — the chrome every page shares. Sticky so the tap-to-call button
+              never scrolls away. Brand and nav link back to real routes; the call
+              button is the one action we want on every page. */}
+          <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+            <div className="mx-auto w-full max-w-5xl px-5">
+              <div className="flex items-center justify-between gap-4 py-3">
+                <Link
+                  href="/"
+                  className="text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:outline-none"
+                >
+                  {CENTER.name}
+                </Link>
+                <CallButton />
+              </div>
+              <SiteNav />
+            </div>
+          </header>
+
           {children}
+
+          {/* Footer — legal, licensing. Shared by every page, so it lives here rather
+              than being re-inlined per page where the license number would drift. */}
+          <footer className="border-t border-border">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-5 py-8 text-sm text-ink-500">
+              <p className="font-medium text-ink-700">{CENTER.name}</p>
+              <p>
+                {tFooter("tagline", {
+                  licenseNumber: CENTER.licenseNumber,
+                  // A string, not the raw number — ICU would render 2009 as "2,009".
+                  since: String(CENTER.yearsOperatingSince),
+                })}
+              </p>
+              <p>
+                {CENTER.address.line1}, {CENTER.address.line2}
+              </p>
+            </div>
+          </footer>
         </NextIntlClientProvider>
       </body>
     </html>
