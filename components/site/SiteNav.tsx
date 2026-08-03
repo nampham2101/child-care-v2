@@ -13,28 +13,41 @@ import { NAV_LINKS } from "@/lib/nav";
  * unlocalized hrefs in `@/lib/nav` — no locale juggling here.
  *
  * The links themselves use next-intl's `Link`, which adds the active locale prefix, so an
- * href written as `/programs` renders as `/en/programs`. Mobile-first: the row scrolls
- * horizontally on a narrow phone rather than wrapping or collapsing behind a menu, which
- * keeps every destination one tap away and needs no open/close state.
+ * href written as `/programs` renders as `/en/programs`. Mobile-first: the pill track
+ * scrolls horizontally on a narrow phone rather than wrapping or collapsing behind a menu,
+ * which keeps every destination one tap away and needs no open/close state.
+ *
+ * Visually it is a segmented control: a soft recessed track holding pill links, with the
+ * current page shown as a raised pill. The accent stays disciplined — the one filled-sage
+ * pill on the site is the tap-to-call button, so the active nav pill is a raised cream
+ * surface with a sage label, distinct from the call-to-action rather than competing with
+ * it. Hover lifts a pill under the pointer (surface plus a soft shadow); pressing dips it
+ * (`active:scale`) for a tactile click, and keyboard focus draws the same sage ring every
+ * control on the site uses.
  */
 export function SiteNav() {
   const t = useTranslations("Nav");
   const pathname = usePathname();
 
   return (
-    <nav aria-label={t("label")} className="-mx-5 overflow-x-auto px-5">
-      <ul className="flex items-center gap-x-5 whitespace-nowrap">
+    <nav
+      aria-label={t("label")}
+      className="-mx-5 overflow-x-auto px-5 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {/* `w-full` stretches the track across the header on a desktop; `min-w-max` stops it
+          collapsing below the labels on a phone, where the nav scrolls sideways instead. */}
+      <ul className="flex w-full min-w-max items-center gap-1 rounded-full border border-border bg-surface/70 p-1 whitespace-nowrap">
         {NAV_LINKS.map(({ href, labelKey }) => {
           const active = pathname === href;
           return (
-            <li key={href}>
+            <li key={href} className="flex-1">
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`inline-block border-b-2 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:outline-none ${
+                className={`flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.94] ${
                   active
-                    ? "border-sage-700 text-ink-900"
-                    : "border-transparent text-ink-500 hover:text-ink-900"
+                    ? "bg-background text-sage-700 shadow-sm ring-1 ring-sage-200"
+                    : "text-ink-500 hover:bg-background hover:text-ink-900 hover:shadow-sm"
                 }`}
               >
                 {t(labelKey)}

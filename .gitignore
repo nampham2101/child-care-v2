@@ -41,6 +41,9 @@ next-env.d.ts
 !.vscode/settings.json
 *.swp
 
+# Local agent tooling — machine-specific dev server config, not shared project setup
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
