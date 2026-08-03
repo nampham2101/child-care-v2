@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
+import { DayTimeline } from "@/components/site/DayTimeline";
 import { CENTER } from "@/lib/center";
+import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
 
 /**
  * The home page — the single page v0.1.0 shipped, now living under `/[locale]`.
@@ -10,52 +12,26 @@ import { CENTER } from "@/lib/center";
  * it. The page is built mobile-first; the `sm:` and `lg:` steps only widen a layout that
  * already works in a narrow column.
  *
- * Its prose comes from `messages/en.json` via next-intl; the structured lists below stay
- * in code because they interleave translatable copy with pure facts (ratios, clock times)
- * and proper nouns — extracting them cleanly belongs with the tickets that own that
- * content (programs, staff), not this routing change.
+ * Its prose comes from `messages/en.json` via next-intl. The age bands and the day's
+ * rhythm now come from `@/lib/programs`, shared with `/programs` — the ratios and clock
+ * times a parent compares must read the same on both pages, so they are defined once
+ * there rather than typed into each page.
  *
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
 
 const yearsOperating = new Date().getFullYear() - CENTER.yearsOperatingSince;
 
-// Sorted by age, because a parent arrives knowing their child's age and nothing else.
-const PROGRAMS = [
-  {
-    name: "Infants",
-    age: "6 weeks – 15 months",
-    ratio: "1:4",
-    blurb:
-      "One primary caregiver per child, so feeds, naps, and first words are tracked by someone who knows your baby — not whoever is free.",
-  },
-  {
-    name: "Toddlers",
-    age: "15 months – 3 years",
-    ratio: "1:5",
-    blurb:
-      "Room to move and language everywhere. Days are predictable so a toddler learning the world can count on what comes next.",
-  },
-  {
-    name: "Preschool",
-    age: "3 – 5 years",
-    ratio: "1:9",
-    blurb:
-      "Early literacy, numbers, and the harder work of taking turns and naming feelings — the groundwork for kindergarten.",
-  },
-];
-
-// The simple timeline that answers the question parents are too polite to ask: what
-// actually happens for nine hours.
-const DAY = [
-  { time: "7:00", label: "Arrival and free play" },
-  { time: "8:30", label: "Breakfast, then morning circle" },
-  { time: "9:30", label: "Learning centers and outdoor time" },
-  { time: "11:30", label: "Lunch, made on site" },
-  { time: "12:30", label: "Nap and quiet rest" },
-  { time: "3:00", label: "Snack and afternoon projects" },
-  { time: "4:30", label: "Outdoor play until pickup" },
-];
+// One sentence per band — the summary that makes a parent open `/programs`, where the
+// full detail lives. Keyed by band so it cannot fall out of step with the shared list.
+const BAND_BLURBS: Record<ProgramBandKey, string> = {
+  infants:
+    "One primary caregiver per child, so feeds, naps, and first words are tracked by someone who knows your baby — not whoever is free.",
+  toddlers:
+    "Room to move and language everywhere. Days are predictable so a toddler learning the world can count on what comes next.",
+  preschool:
+    "Early literacy, numbers, and the harder work of taking turns and naming feelings — the groundwork for kindergarten.",
+};
 
 const STAFF = [
   {
@@ -93,6 +69,7 @@ export default async function Home({
   setRequestLocale(locale);
 
   const t = await getTranslations("HomePage");
+  const tBands = await getTranslations("Programs");
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -150,21 +127,21 @@ export default async function Home({
           {t("programsHeading")}
         </h2>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PROGRAMS.map((program) => (
+          {PROGRAM_BANDS.map((band) => (
             <article
-              key={program.name}
+              key={band.key}
               className="flex flex-col rounded-2xl border border-border bg-surface p-6"
             >
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="text-lg font-semibold text-ink-900">
-                  {program.name}
+                  {tBands(band.key)}
                 </h3>
                 <span className="text-sm font-medium text-sage-700 tabular-nums">
-                  {program.ratio}
+                  {band.ratio}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-ink-500">{program.age}</p>
-              <p className="mt-3 text-ink-700">{program.blurb}</p>
+              <p className="mt-1 text-sm text-ink-500">{band.ageLabel}</p>
+              <p className="mt-3 text-ink-700">{BAND_BLURBS[band.key]}</p>
             </article>
           ))}
         </div>
@@ -182,19 +159,9 @@ export default async function Home({
           {t("dayHeading")}
         </h2>
         <p className="mt-2 max-w-xl text-ink-700">{t("dayBody")}</p>
-        <ol className="mt-8 max-w-xl">
-          {DAY.map((slot) => (
-            <li
-              key={slot.time}
-              className="flex gap-4 border-l-2 border-sage-200 pb-6 pl-5 last:pb-0"
-            >
-              <span className="w-14 shrink-0 text-sm font-semibold text-sage-700 tabular-nums">
-                {slot.time}
-              </span>
-              <span className="text-ink-700">{slot.label}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-8">
+          <DayTimeline />
+        </div>
       </section>
 
       {/* Staff — faces and roles; caregiver consistency is what parents worry about. */}
