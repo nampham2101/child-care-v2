@@ -222,11 +222,15 @@ export default async function About({ params }: PageProps) {
           {t("safetyHeading")}
         </h2>
         <p className="mt-2 max-w-xl text-ink-700">{t("safetyBody")}</p>
+        {/* Five routines in a two-column grid leaves the last one alone in a half-empty
+            row, which reads as an unfinished page rather than a deliberate one. It spans
+            both columns instead — the count is odd because the routines are what they
+            are, so the layout bends rather than the content. */}
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
           {SAFETY_KEYS.map((key) => (
             <article
               key={key}
-              className="rounded-2xl border border-border bg-surface p-6"
+              className="rounded-2xl border border-border bg-surface p-6 sm:last:col-span-2"
             >
               <h3 className="text-lg font-semibold text-ink-900">
                 {t(`safety${key}Title`)}
