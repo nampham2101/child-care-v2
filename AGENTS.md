@@ -3,10 +3,14 @@
 You are working on the marketing website for a child care center. This file is the entry point for
 any AI agent in this repository. Humans read `docs/`; you read this first.
 
-**Repository:** `nampham2101/child-care-v2` (private)
+**Repository:** `nampham2101/child-care-v2` — **public**. Issue text, pull request descriptions,
+commit messages, and branch names are world-readable from the moment they are pushed. Write them for
+that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.1.0` shipped — the home page is live at <https://child-care-v2.netlify.app>.
-Work now targets `v0.2.0`: the remaining static pages (programs, about, staff, tuition, FAQ, contact).
+**Current state:** `v0.1.0` is the released version — the home page is live at
+<https://child-care-v2.netlify.app>. Work targets `v0.2.0`: `/programs` is merged to `main` but not
+released; about, staff, tuition, FAQ, and contact remain. Merged is not shipped — only a published
+release reaches production.
 
 ---
 
