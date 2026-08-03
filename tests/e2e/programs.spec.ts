@@ -46,11 +46,23 @@ test.describe("programs page, cold load", () => {
       "Preschool",
     ]);
 
-    // The two numbers a parent writes down when comparing centers. They come from
-    // `lib/programs.ts`, shared with the home page — if that list is ever edited to
-    // disagree with itself, this fails.
-    await expect(page.getByText("1:4", { exact: true })).toBeVisible();
-    await expect(page.getByText("8 children", { exact: true })).toBeVisible();
+    // The hero's evidence card summarizes all three rooms before a parent scrolls.
+    const hero = page.getByRole("region", { name: /programs by age/i });
+    await expect(
+      hero.getByText("1:4 · 8 children", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      hero.getByText("1:9 · 18 children", { exact: true }),
+    ).toBeVisible();
+
+    // The two numbers a parent writes down when comparing centers, in the infant room's
+    // own facts panel. They come from `lib/programs.ts`, shared with the home page — if
+    // that list is ever edited to disagree with itself, this fails.
+    const infantRoom = page.locator("#infants");
+    await expect(infantRoom.getByText("1:4", { exact: true })).toBeVisible();
+    await expect(
+      infantRoom.getByText("8 children", { exact: true }),
+    ).toBeVisible();
 
     // The day's rhythm renders, including the last entry — a truncated list would
     // otherwise pass on the first row alone.

@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
 import { DayTimeline } from "@/components/site/DayTimeline";
+import { HeroFacts } from "@/components/site/HeroFacts";
+import { PageHero } from "@/components/site/PageHero";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
 
@@ -73,50 +75,38 @@ export default async function Home({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
-      {/* Hero — a promise about your child, not a claim about the business. */}
-      <section className="py-14 sm:py-20" aria-labelledby="hero-heading">
-        <p className="text-sm font-medium tracking-wide text-terracotta-700 uppercase">
-          {t("heroEyebrow", { ageRange: CENTER.ageRange })}
-        </p>
-        <h1
-          id="hero-heading"
-          className="mt-3 max-w-2xl text-4xl font-semibold text-balance text-ink-900 sm:text-5xl"
-        >
-          {t("heroHeading")}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-700">
-          {t("heroBody", { neighborhood: CENTER.neighborhood })}
-        </p>
-        <div className="mt-7 flex flex-wrap items-center gap-4">
-          <CallButton />
-          <a
-            href="#visit"
-            className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:border-ink-300 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
-          >
-            {t("planVisit")}
-          </a>
-        </div>
-      </section>
-
-      {/* Trust strip — the four things parents compare, license number included. */}
-      <section
-        aria-label="At a glance"
-        className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4"
+      {/* Hero — a promise about your child on the left, the four things parents compare
+          on the right. The trust strip used to be its own band under the hero; it moved
+          in here so the hero's right half carries proof instead of empty space, and so
+          the same four facts are not stated twice within one screen. */}
+      <PageHero
+        eyebrow={t("heroEyebrow", { ageRange: CENTER.ageRange })}
+        heading={t("heroHeading")}
+        headingId="hero-heading"
+        intro={t("heroBody", { neighborhood: CENTER.neighborhood })}
+        card={
+          <HeroFacts
+            variant="stat"
+            facts={[
+              { value: CENTER.infantRatio, label: t("trustInfantRatio") },
+              {
+                value: `${yearsOperating} years`,
+                label: t("trustYearsCaring"),
+              },
+              { value: "7am–6pm", label: t("trustOpenWeekdays") },
+              { value: CENTER.licenseNumber, label: t("trustStateLicense") },
+            ]}
+          />
+        }
       >
-        {[
-          { value: CENTER.infantRatio, label: t("trustInfantRatio") },
-          { value: `${yearsOperating} years`, label: t("trustYearsCaring") },
-          { value: "7am–6pm", label: t("trustOpenWeekdays") },
-          { value: CENTER.licenseNumber, label: t("trustStateLicense") },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-surface px-5 py-6">
-            <div className="text-2xl font-semibold text-ink-900 tabular-nums">
-              {stat.value}
-            </div>
-            <div className="mt-1 text-sm text-ink-500">{stat.label}</div>
-          </div>
-        ))}
-      </section>
+        <CallButton />
+        <a
+          href="#visit"
+          className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:border-ink-300 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+        >
+          {t("planVisit")}
+        </a>
+      </PageHero>
 
       {/* Programs — sorted by age. */}
       <section className="py-14 sm:py-20" aria-labelledby="programs-heading">

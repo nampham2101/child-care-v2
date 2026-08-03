@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
+import { HeroFacts } from "@/components/site/HeroFacts";
+import { PageHero } from "@/components/site/PageHero";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
@@ -61,18 +63,27 @@ export default async function About({ params }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
-      <section className="py-14 sm:py-20" aria-labelledby="about-heading">
-        <p className="text-sm font-medium tracking-wide text-terracotta-700 uppercase">
-          {t("eyebrow", { since: licensedSince })}
-        </p>
-        <h1
-          id="about-heading"
-          className="mt-3 max-w-2xl text-4xl font-semibold text-balance text-ink-900 sm:text-5xl"
-        >
-          {t("heading")}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-700">{t("intro")}</p>
-      </section>
+      {/* The licensing facts sit here rather than beside the licensing prose below: they
+          are what a parent scrolls this page to verify, and the section down there is
+          where they are explained, not where they need to be listed a second time. */}
+      <PageHero
+        eyebrow={t("eyebrow", { since: licensedSince })}
+        heading={t("heading")}
+        headingId="about-heading"
+        intro={t("intro")}
+        card={
+          <HeroFacts
+            facts={[
+              { label: t("licensingNumberLabel"), value: CENTER.licenseNumber },
+              { label: t("licensingSinceLabel"), value: licensedSince },
+              {
+                label: t("licensingInspectionsLabel"),
+                value: t("licensingInspectionsValue"),
+              },
+            ]}
+          />
+        }
+      />
 
       {/* Philosophy — stated as three positions, because a belief a center will not put
           in a sentence is not one it runs on. */}
@@ -180,31 +191,12 @@ export default async function About({ params }: PageProps) {
         >
           {t("licensingHeading")}
         </h2>
+        {/* The number, the year, and the inspection cadence are in the hero card now, so
+            this section explains rather than restates them. */}
         <p className="mt-2 max-w-xl text-ink-700">
           {t("licensingBody", { since: licensedSince })}
         </p>
-        <dl className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-          {[
-            {
-              label: t("licensingNumberLabel"),
-              value: CENTER.licenseNumber,
-            },
-            { label: t("licensingSinceLabel"), value: licensedSince },
-            {
-              label: t("licensingInspectionsLabel"),
-              value: t("licensingInspectionsValue"),
-            },
-            {
-              label: t("licensingStaffLabel"),
-              value: t("licensingStaffValue"),
-            },
-          ].map((fact) => (
-            <div key={fact.label} className="bg-surface px-5 py-6">
-              <dt className="text-sm font-medium text-ink-500">{fact.label}</dt>
-              <dd className="mt-1 text-ink-900 tabular-nums">{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
+        <p className="mt-4 max-w-xl text-ink-700">{t("licensingStaffLine")}</p>
         <p className="mt-4 max-w-xl text-sm text-ink-500">
           {t("licensingRecords")}
         </p>

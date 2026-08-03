@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
 import { DayTimeline } from "@/components/site/DayTimeline";
+import { HeroFacts } from "@/components/site/HeroFacts";
+import { PageHero } from "@/components/site/PageHero";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
@@ -66,18 +68,22 @@ export default async function Programs({ params }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
-      <section className="py-14 sm:py-20" aria-labelledby="programs-heading">
-        <p className="text-sm font-medium tracking-wide text-terracotta-700 uppercase">
-          {t("eyebrow", { ageRange: CENTER.ageRange })}
-        </p>
-        <h1
-          id="programs-heading"
-          className="mt-3 max-w-2xl text-4xl font-semibold text-balance text-ink-900 sm:text-5xl"
-        >
-          {t("heading")}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-700">{t("intro")}</p>
-      </section>
+      {/* The card is the three ratios, which is what a parent opens this page to find.
+          The rooms below give each one its context; the hero gives the numbers first. */}
+      <PageHero
+        eyebrow={t("eyebrow", { ageRange: CENTER.ageRange })}
+        heading={t("heading")}
+        headingId="programs-heading"
+        intro={t("intro")}
+        card={
+          <HeroFacts
+            facts={PROGRAM_BANDS.map((band) => ({
+              label: tBands(band.key),
+              value: `${band.ratio} · ${band.groupSize}`,
+            }))}
+          />
+        }
+      />
 
       {/* One section per room, youngest-first. The facts panel repeats the age range that
           sits under the heading — a parent scanning only the panels should not have to

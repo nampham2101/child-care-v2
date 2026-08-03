@@ -37,18 +37,18 @@ test.describe("about page, cold load", () => {
       }),
     ).toBeVisible();
 
-    // The license number, in the licensing block rather than the footer that every page
-    // carries: this page is the one that says what the license covers, so assert the
-    // number inside that section specifically.
-    const licensing = page.getByRole("region", {
-      name: /licensing and the checks behind it/i,
+    // The license number, in the hero's evidence card rather than the footer that every
+    // page carries: a parent checking a license should not have to scroll for it, so
+    // assert it inside the hero band specifically. Exact, because the eyebrow and the
+    // licensing prose also mention the year — only the fact cells hold these on their own.
+    const hero = page.getByRole("region", {
+      name: /how we care for children/i,
     });
-    // Exact, because the section's prose also mentions the year — only the fact cells
-    // hold these strings on their own.
+    await expect(hero.getByText("C-1094872", { exact: true })).toBeVisible();
+    await expect(hero.getByText("2009", { exact: true })).toBeVisible();
     await expect(
-      licensing.getByText("C-1094872", { exact: true }),
+      hero.getByText("Unannounced, at least annually", { exact: true }),
     ).toBeVisible();
-    await expect(licensing.getByText("2009", { exact: true })).toBeVisible();
 
     // Every ratio and group size, read across one row per room. These come from
     // `lib/programs.ts`, shared with the home and programs pages — if that list is ever
