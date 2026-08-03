@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   // name (`"Programs"`) and get `"Programs · Willow Grove Children's Center"` for free,
   // so the center name is written once here rather than on every page.
   title: {
-    default: "Willow Grove Children's Center · Licensed child care in NW Portland",
+    default:
+      "Willow Grove Children's Center · Licensed child care in NW Portland",
     template: "%s · Willow Grove Children's Center",
   },
   description:
