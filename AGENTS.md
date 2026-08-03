@@ -5,8 +5,8 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 
 **Repository:** `nampham2101/child-care-v2` (private)
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** scaffold. The app typechecks, lints, builds, and prerenders `/` as static, but `/`
-is a placeholder — there is no website yet.
+**Current state:** `v0.1.0` shipped — the home page is live at <https://child-care-v2.netlify.app>.
+Work now targets `v0.2.0`: the remaining static pages (programs, about, staff, tuition, FAQ, contact).
 
 ---
 
@@ -111,7 +111,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, self-review checklist, release policy |
-| GitHub Issues | The task queue. Milestone `v0.1.0` is the current target |
+| GitHub Issues | The task queue. Milestone `v0.2.0` is the current target |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
