@@ -3,9 +3,11 @@
 Marketing website for a child care center, with a small admin area so center staff can update
 content themselves.
 
-> **Status: scaffold.** The app builds and deploys, but there is no website yet — `/` is a
-> placeholder, replaced by the home page in the next change. See [`docs/PLAN.md`](docs/PLAN.md) for
-> what is being built.
+**Live site:** <https://child-care-v2.netlify.app>
+
+> **Status: in progress (`v0.1.0`).** The home page is live; the remaining pages (programs, about,
+> staff, tuition, FAQ, contact) and the admin area are still being built. See
+> [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
 
 ## What this is
 
