@@ -1,26 +1,11 @@
-import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import "./globals.css";
+import type { ReactNode } from "react";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Willow Grove Children's Center · Licensed child care in NW Portland",
-  description:
-    "A small, licensed child care center in Northwest Portland for ages 6 weeks to 5 years, where the same caregivers know your child by name. Call to plan a visit.",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
-    </html>
-  );
+/**
+ * A passthrough root layout. Next requires a layout at `app/`, but the real document —
+ * `<html lang>`, the font, and the i18n provider — lives in `app/[locale]/layout.tsx`,
+ * because only that layout knows the active locale from the URL. This file exists solely
+ * to satisfy the framework and hands straight through to the locale layout.
+ */
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return children;
 }
