@@ -1,4 +1,16 @@
 {
+  "Nav": {
+    "label": "Primary",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "home": "Willow Grove home",
+    "programs": "Programs",
+    "about": "About",
+    "staff": "Staff",
+    "tuition": "Tuition",
+    "faq": "FAQ",
+    "contact": "Contact"
+  },
   "HomePage": {
     "heroEyebrow": "Licensed child care · Ages {ageRange}",
     "heroHeading": "A place where your child is known by name.",
