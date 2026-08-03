@@ -1,6 +1,8 @@
 {
   "Nav": {
     "label": "Primary",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "home": "Willow Grove home",
     "programs": "Programs",
     "about": "About",

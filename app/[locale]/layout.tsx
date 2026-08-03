@@ -7,7 +7,6 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server";
-import { CallButton } from "@/components/site/CallButton";
 import { SiteNav } from "@/components/site/SiteNav";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -64,20 +63,19 @@ export default async function LocaleLayout({
     <html lang={locale} className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider messages={messages}>
-          {/* Header — the chrome every page shares. Sticky so the tap-to-call button
-              never scrolls away. Brand and nav link back to real routes; the call
-              button is the one action we want on every page. */}
-          <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-            <div className="mx-auto w-full max-w-5xl px-5">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <Link
-                  href="/"
-                  className="text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:outline-none"
-                >
-                  {CENTER.name}
-                </Link>
-                <CallButton />
-              </div>
+          {/* Header — the chrome every page shares. Sticky, so the brand and the primary
+              nav stay reachable as a parent reads down a long page. The tap-to-call button
+              is not here by choice; calling is offered in the page body instead.
+              Being `sticky` also makes this the containing block the mobile menu panel
+              positions against, so the panel drops flush with the header's bottom edge. */}
+          <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
+            <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-5 py-4">
+              <Link
+                href="/"
+                className="rounded-sm text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-4 focus-visible:ring-offset-background focus-visible:outline-none"
+              >
+                {CENTER.name}
+              </Link>
               <SiteNav />
             </div>
           </header>
