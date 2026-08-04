@@ -116,8 +116,7 @@ competence reads as trustworthy. Saturated primaries read as generic.
 | Section | The job it does |
 |---|---|
 | Header | Phone number as a **tap-to-call button**, not text. Never scrolls away. Highest-converting element on the page |
-| Hero | Promise about *your child* ("known by name"), not a claim about the business. Eyebrow line states licensing and age range so a parent knows in one second whether we serve them |
-| Trust strip | The four things parents compare: ratio, years operating, hours, license number. Publishing the license number signals nothing to hide |
+| Hero | Promise about *your child* ("known by name"), not a claim about the business. Eyebrow line states licensing and age range so a parent knows in one second whether we serve them. The four things parents compare — ratio, years operating, hours, license number — sit in the evidence card filling the hero's other half. Publishing the license number signals nothing to hide |
 | Programs | Sorted by age, because a parent arrives knowing their child's age and nothing else |
 | A day here | Simple timeline. Answers the question parents are too polite to ask: what actually happens to my child for nine hours |
 | Staff | Faces and roles. Caregiver consistency is what parents worry about most |
@@ -164,7 +163,7 @@ Versions verified against the npm registry on 2026-07-22.
 | Netlify CLI | `netlify-cli` | 26.2.0 |
 | Database, auth, storage | `@supabase/supabase-js` | 2.110.8 |
 | Styling | Tailwind CSS | 4.3.3 |
-| i18n | `next-intl` | 4.13.3 |
+| i18n | `next-intl` | 4.13.4 |
 | Testing | Playwright; Vitest when there is logic to unit-test | latest at scaffold |
 
 Photos live in Supabase Storage and are optimized on the fly by Netlify's Image CDN, which Next.js
@@ -181,8 +180,14 @@ SUPPORTED_NEXT_VERSIONS = ">=13.5.0"
 
 Open-ended, with no upper bound, so Next.js 16.2.11 passes. The runtime also references Turbopack
 internally, which matters because Next 16 builds with Turbopack by default. **No version pin-back is
-needed.** A scaffolded Next 16 app was confirmed locally to typecheck, lint, build, and prerender
-its route as static. The first real Netlify deploy remains the end-to-end confirmation.
+needed.** This is now confirmed end to end rather than locally: the `v0.1.0` release deployed to
+production through the runtime plugin and the site serves prerendered pages.
+
+The one residual is cosmetic. Next 16 deprecated the `middleware` file convention in favour of
+`proxy`, so every build prints a deprecation warning for the locale middleware. It still works and
+still builds; whether the plugin runs a `proxy.ts` the same way has to be checked on a real Deploy
+Preview before renaming the file that every first-time visitor's `/`→`/en` redirect depends on.
+Tracked as issue #27 against `v0.3.0`, to revisit at the next runtime bump.
 
 ### Why Supabase rather than Netlify's own database
 
