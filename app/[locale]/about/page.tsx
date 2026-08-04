@@ -33,6 +33,16 @@ const licensedSince = String(CENTER.yearsOperatingSince);
 // in `messages/en.json` rather than repeating the block markup three times.
 const PHILOSOPHY_KEYS = ["Known", "Rhythm", "Plain"] as const;
 
+// What a state inspector actually looks at, beside the prose that claims a license is an
+// inspection regime. Same key-driven shape as the blocks below.
+const LICENSING_COVERS_KEYS = [
+  "Ratios",
+  "Kitchen",
+  "Sleep",
+  "Building",
+  "Records",
+] as const;
+
 // Safety, as the routines it actually consists of. Same key-driven shape as above.
 const SAFETY_KEYS = [
   "Entry",
@@ -192,14 +202,34 @@ export default async function About({ params }: PageProps) {
           {t("licensingHeading")}
         </h2>
         {/* The number, the year, and the inspection cadence are in the hero card now, so
-            this section explains rather than restates them. */}
-        <p className="mt-2 max-w-xl text-ink-700">
-          {t("licensingBody", { since: licensedSince })}
-        </p>
-        <p className="mt-4 max-w-xl text-ink-700">{t("licensingStaffLine")}</p>
-        <p className="mt-4 max-w-xl text-sm text-ink-500">
-          {t("licensingRecords")}
-        </p>
+            this section explains rather than restates them — and the inspection scope
+            sits beside the prose, because "it is an inspection regime" is a claim that
+            wants the list of what gets inspected next to it, not two screens away. */}
+        <div className="mt-2 grid items-start gap-10 sm:grid-cols-5">
+          <div className="sm:col-span-3">
+            <p className="text-ink-700">
+              {t("licensingBody", { since: licensedSince })}
+            </p>
+            <p className="mt-4 text-ink-700">{t("licensingStaffLine")}</p>
+            <p className="mt-4 text-sm text-ink-500">{t("licensingRecords")}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-surface p-6 sm:col-span-2">
+            <h3 className="text-sm font-medium text-ink-500">
+              {t("licensingCoversHeading")}
+            </h3>
+            <ul className="mt-3 space-y-2 text-ink-900">
+              {LICENSING_COVERS_KEYS.map((key) => (
+                <li key={key} className="flex gap-2">
+                  <span aria-hidden="true" className="text-sage-500">
+                    ·
+                  </span>
+                  {t(`licensingCovers${key}`)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </section>
 
       {/* Safety — routines, not reassurance. */}
