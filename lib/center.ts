@@ -17,6 +17,12 @@ export const CENTER = {
   phoneDisplay: "(503) 555-0142",
   phoneHref: "tel:+15035550142",
 
+  // Same display/href pairing as the phone. The `.example` domain is reserved by RFC 2606
+  // for exactly this, so placeholder copy can never send a parent's message to a real
+  // inbox. Calling is the conversion action; email is the slower second option.
+  emailDisplay: "hello@willowgrove.example",
+  emailHref: "mailto:hello@willowgrove.example",
+
   licenseNumber: "C-1094872",
   yearsOperatingSince: 2009,
 

@@ -19,7 +19,13 @@
 
 export type HeroFact = {
   label: string;
-  value: string;
+  /**
+   * Usually a string. `ReactNode` so a value that is only useful when it is actionable —
+   * the email address on `/contact`, which a parent on a phone should be able to tap —
+   * can be a link rather than text they have to transcribe. Keep it to a value, not a
+   * paragraph: anything with its own layout belongs beside the card, not inside it.
+   */
+  value: React.ReactNode;
 };
 
 export function HeroFacts({
