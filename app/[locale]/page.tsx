@@ -3,8 +3,10 @@ import { CallButton } from "@/components/site/CallButton";
 import { DayTimeline } from "@/components/site/DayTimeline";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
+import { StaffCard } from "@/components/site/StaffCard";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
+import { FEATURED_STAFF } from "@/lib/staff";
 
 /**
  * The home page — the single page v0.1.0 shipped, now living under `/[locale]`.
@@ -17,7 +19,8 @@ import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
  * Its prose comes from `messages/en.json` via next-intl. The age bands and the day's
  * rhythm now come from `@/lib/programs`, shared with `/programs` — the ratios and clock
  * times a parent compares must read the same on both pages, so they are defined once
- * there rather than typed into each page.
+ * there rather than typed into each page. The staff strip reads `@/lib/staff` on the same
+ * terms, shared with `/staff`, so a tenure cannot say twelve years here and eleven there.
  *
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
@@ -34,33 +37,6 @@ const BAND_BLURBS: Record<ProgramBandKey, string> = {
   preschool:
     "Early literacy, numbers, and the harder work of taking turns and naming feelings — the groundwork for kindergarten.",
 };
-
-const STAFF = [
-  {
-    name: "Maria Delgado",
-    role: "Director",
-    tenure: "with Willow Grove 12 years",
-  },
-  {
-    name: "Aisha Bello",
-    role: "Lead Infant Teacher",
-    tenure: "with Willow Grove 8 years",
-  },
-  {
-    name: "Tom Fischer",
-    role: "Lead Preschool Teacher",
-    tenure: "with Willow Grove 6 years",
-  },
-];
-
-// Initials stand in for a photo until real staff portraits are commissioned. A calm
-// monogram reads better than a generic stock smile, which the design brief rules out.
-function initialsOf(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("");
-}
 
 export default async function Home({
   params,
@@ -165,24 +141,11 @@ export default async function Home({
         >
           {t("staffHeading")}
         </h2>
+        {/* Three of the seven, without bios — this is an introduction, and `/staff` is
+            where the question of who these people are actually gets answered. */}
         <div className="mt-8 grid gap-5 sm:grid-cols-3">
-          {STAFF.map((person) => (
-            <figure
-              key={person.name}
-              className="rounded-2xl border border-border bg-surface p-6"
-            >
-              <div
-                aria-hidden="true"
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-sage-50 text-lg font-semibold text-sage-700"
-              >
-                {initialsOf(person.name)}
-              </div>
-              <figcaption className="mt-4">
-                <div className="font-semibold text-ink-900">{person.name}</div>
-                <div className="text-sm text-ink-700">{person.role}</div>
-                <div className="mt-1 text-sm text-ink-500">{person.tenure}</div>
-              </figcaption>
-            </figure>
+          {FEATURED_STAFF.map((person) => (
+            <StaffCard key={person.key} person={person} />
           ))}
         </div>
       </section>
