@@ -25,6 +25,17 @@
     "snack": "Snack and afternoon projects",
     "pickup": "Outdoor play until pickup"
   },
+  "Visit": {
+    "cardHeading": "What a visit looks like",
+    "whenLabel": "Best time to come",
+    "whenValue": "Ten in the morning, while the rooms are running",
+    "askLabel": "Ask for",
+    "askValue": "Maria, the director",
+    "lengthLabel": "How long it takes",
+    "lengthValue": "About twenty minutes",
+    "bookingLabel": "Booking",
+    "bookingValue": "No appointment needed"
+  },
   "ProgramsPage": {
     "metaTitle": "Programs",
     "metaDescription": "Infant, toddler, and preschool rooms in Northwest Portland — ratios, group sizes, and what a day actually looks like in each room.",
@@ -43,7 +54,7 @@
     "dayHeading": "A day at Willow Grove",
     "dayBody": "Every room runs on the same rhythm, scaled to the age. Infants sleep and eat on their own schedule inside it; older children move through it together.",
     "visitHeading": "Not sure which room fits?",
-    "visitBody": "Call the office and ask for Maria. She will tell you plainly which rooms have space and what the wait looks like for the ones that do not — and you are welcome to come and stand in the room your child would actually be in.",
+    "visitBody": "Call the office and you will get a plain answer about which rooms have space and what the wait looks like for the ones that do not — then come and stand in the room your child would actually be in.",
     "visitAria": "Plan a visit"
   },
   "AboutPage": {
@@ -94,7 +105,7 @@
     "safetyDrillsTitle": "Practised, not planned",
     "safetyDrillsBody": "Fire drills monthly and emergency procedures quarterly, with the children, so the routine is familiar to them rather than frightening.",
     "visitHeading": "The part that matters is standing in the room",
-    "visitBody": "None of this is worth much on a screen. Call the office and ask for Maria — come at ten in the morning when the rooms are busy, not at nap time when every center looks calm.",
+    "visitBody": "None of this is worth much on a screen. Every center looks calm at nap time; what you want to see is a room with children awake in it, and the only way to see that is to be standing in one.",
     "visitAria": "Plan a visit"
   },
   "HomePage": {

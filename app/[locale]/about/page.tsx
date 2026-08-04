@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { CallButton } from "@/components/site/CallButton";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
+import { VisitSection } from "@/components/site/VisitSection";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
@@ -264,22 +264,9 @@ export default async function About({ params }: PageProps) {
       </section>
 
       {/* The conversion action. There is no form anywhere on this site by decision — the
-          next step is a phone call. */}
-      <section
-        className="border-t border-border py-14 sm:py-20"
-        aria-labelledby="visit-heading"
-      >
-        <h2
-          id="visit-heading"
-          className="text-2xl font-semibold text-ink-900 sm:text-3xl"
-        >
-          {t("visitHeading")}
-        </h2>
-        <p className="mt-2 max-w-xl text-ink-700">{t("visitBody")}</p>
-        <div className="mt-7">
-          <CallButton />
-        </div>
-      </section>
+          next step is a phone call, and the card beside it answers what a parent wants to
+          know before making one. */}
+      <VisitSection heading={t("visitHeading")} body={t("visitBody")} />
     </main>
   );
 }
