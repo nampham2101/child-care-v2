@@ -5,10 +5,9 @@ content themselves.
 
 **Live site:** <https://child-care-v2.netlify.app>
 
-> **Status: in progress.** `v0.1.0` is the released version, so the home page is what is live. The
-> other six public pages — programs, about, staff, tuition, FAQ, contact — are merged to `main` and
-> waiting on the `v0.2.0` release. Content still comes from the code rather than a database, and the
-> admin area is not built. See [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
+> **Status: in progress (`v0.2.0`).** All seven public pages are live. Content still comes from the
+> code rather than a database, and the admin area is not built — those are `v0.3.0` and `v0.4.0`.
+> See [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
 
 ## What this is
 

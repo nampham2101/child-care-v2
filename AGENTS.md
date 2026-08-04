@@ -7,10 +7,11 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.1.0` is the released version — the home page is live at
-<https://child-care-v2.netlify.app>. Work targets `v0.2.0`, and every public page — `/programs`,
-`/about`, `/staff`, `/contact`, `/faq`, and `/tuition` — is merged to `main` but not released.
-Merged is not shipped — only a published release reaches production.
+**Current state:** `v0.2.0` is the released version — all seven public pages are live at
+<https://child-care-v2.netlify.app>: home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, and
+`/contact`. Work now targets `v0.3.0`: Supabase schema, row-level security, and reading content from
+the database at build time. Content is still in the code until then. Merged is not shipped — only a
+published release reaches production.
 
 ---
 
@@ -115,7 +116,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, self-review checklist, release policy |
-| GitHub Issues | The task queue. Milestone `v0.2.0` is the current target |
+| GitHub Issues | The task queue. Milestone `v0.3.0` is the current target |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
