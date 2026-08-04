@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
+import { HeroFacts } from "@/components/site/HeroFacts";
+import { PageHero } from "@/components/site/PageHero";
 import { CENTER } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
@@ -30,6 +32,16 @@ const licensedSince = String(CENTER.yearsOperatingSince);
 // their day is like, and whether I will be told the truth about it. Keys name the strings
 // in `messages/en.json` rather than repeating the block markup three times.
 const PHILOSOPHY_KEYS = ["Known", "Rhythm", "Plain"] as const;
+
+// What a state inspector actually looks at, beside the prose that claims a license is an
+// inspection regime. Same key-driven shape as the blocks below.
+const LICENSING_COVERS_KEYS = [
+  "Ratios",
+  "Kitchen",
+  "Sleep",
+  "Building",
+  "Records",
+] as const;
 
 // Safety, as the routines it actually consists of. Same key-driven shape as above.
 const SAFETY_KEYS = [
@@ -61,18 +73,27 @@ export default async function About({ params }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
-      <section className="py-14 sm:py-20" aria-labelledby="about-heading">
-        <p className="text-sm font-medium tracking-wide text-terracotta-700 uppercase">
-          {t("eyebrow", { since: licensedSince })}
-        </p>
-        <h1
-          id="about-heading"
-          className="mt-3 max-w-2xl text-4xl font-semibold text-balance text-ink-900 sm:text-5xl"
-        >
-          {t("heading")}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-700">{t("intro")}</p>
-      </section>
+      {/* The licensing facts sit here rather than beside the licensing prose below: they
+          are what a parent scrolls this page to verify, and the section down there is
+          where they are explained, not where they need to be listed a second time. */}
+      <PageHero
+        eyebrow={t("eyebrow", { since: licensedSince })}
+        heading={t("heading")}
+        headingId="about-heading"
+        intro={t("intro")}
+        card={
+          <HeroFacts
+            facts={[
+              { label: t("licensingNumberLabel"), value: CENTER.licenseNumber },
+              { label: t("licensingSinceLabel"), value: licensedSince },
+              {
+                label: t("licensingInspectionsLabel"),
+                value: t("licensingInspectionsValue"),
+              },
+            ]}
+          />
+        }
+      />
 
       {/* Philosophy — stated as three positions, because a belief a center will not put
           in a sentence is not one it runs on. */}
@@ -180,34 +201,35 @@ export default async function About({ params }: PageProps) {
         >
           {t("licensingHeading")}
         </h2>
-        <p className="mt-2 max-w-xl text-ink-700">
-          {t("licensingBody", { since: licensedSince })}
-        </p>
-        <dl className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-          {[
-            {
-              label: t("licensingNumberLabel"),
-              value: CENTER.licenseNumber,
-            },
-            { label: t("licensingSinceLabel"), value: licensedSince },
-            {
-              label: t("licensingInspectionsLabel"),
-              value: t("licensingInspectionsValue"),
-            },
-            {
-              label: t("licensingStaffLabel"),
-              value: t("licensingStaffValue"),
-            },
-          ].map((fact) => (
-            <div key={fact.label} className="bg-surface px-5 py-6">
-              <dt className="text-sm font-medium text-ink-500">{fact.label}</dt>
-              <dd className="mt-1 text-ink-900 tabular-nums">{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-4 max-w-xl text-sm text-ink-500">
-          {t("licensingRecords")}
-        </p>
+        {/* The number, the year, and the inspection cadence are in the hero card now, so
+            this section explains rather than restates them — and the inspection scope
+            sits beside the prose, because "it is an inspection regime" is a claim that
+            wants the list of what gets inspected next to it, not two screens away. */}
+        <div className="mt-2 grid items-start gap-10 sm:grid-cols-5">
+          <div className="sm:col-span-3">
+            <p className="text-ink-700">
+              {t("licensingBody", { since: licensedSince })}
+            </p>
+            <p className="mt-4 text-ink-700">{t("licensingStaffLine")}</p>
+            <p className="mt-4 text-sm text-ink-500">{t("licensingRecords")}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-surface p-6 sm:col-span-2">
+            <h3 className="text-sm font-medium text-ink-500">
+              {t("licensingCoversHeading")}
+            </h3>
+            <ul className="mt-3 space-y-2 text-ink-900">
+              {LICENSING_COVERS_KEYS.map((key) => (
+                <li key={key} className="flex gap-2">
+                  <span aria-hidden="true" className="text-sage-500">
+                    ·
+                  </span>
+                  {t(`licensingCovers${key}`)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </section>
 
       {/* Safety — routines, not reassurance. */}

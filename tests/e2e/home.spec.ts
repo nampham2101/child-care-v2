@@ -45,10 +45,13 @@ test.describe("home page, cold load", () => {
     await expect(callLink).toBeVisible();
     await expect(callLink).toHaveAttribute("href", "tel:+15035550142");
 
-    // Trust signals a parent compares — the published license number is deliberate. It
-    // appears in the trust strip and again in the footer, so target the trust-strip cell
-    // by its exact text rather than a substring that matches both.
-    await expect(page.getByText("C-1094872", { exact: true })).toBeVisible();
+    // Trust signals a parent compares — the published license number is deliberate. The
+    // four stats live in the hero's evidence card, and the license number appears again
+    // in the footer, so scope to the hero band and match the cell exactly.
+    const hero = page.getByRole("region", { name: /known by name/i });
+    await expect(hero.getByText("C-1094872", { exact: true })).toBeVisible();
+    await expect(hero.getByText("1:4", { exact: true })).toBeVisible();
+    await expect(hero.getByText("7am–6pm", { exact: true })).toBeVisible();
 
     // Each section that does a distinct job for the parent actually rendered.
     await expect(

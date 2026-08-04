@@ -76,6 +76,31 @@ prose; `org_id` is acceptable in the schema because it is the established column
 
 ---
 
+## Page layout
+
+### Every page opens with a hero, and the hero has two halves
+
+Use `components/site/PageHero.tsx`. Prose left, an evidence card right — `HeroFacts`, or
+something else of similar weight. Below `sm` they stack, prose first.
+
+Body text stays capped at its readable measure: around 70 characters a line, which is what
+`PageHero` enforces by putting the prose in a 3/5 column. **Do not widen prose to fill a
+container.** At full width on a laptop a paragraph runs past 120 characters a line and the eye
+loses its place on the return sweep.
+
+The empty half that a measure cap leaves over is filled with a fact, not left blank. Blank space
+on one side of a hero reads as a page that failed to load, and this site's whole argument is
+evidence rather than adjectives — so the hero states a claim and shows the proof beside it.
+
+**The card carries a fact a parent is shopping for**, and it does not repeat what the page says
+immediately below it. When the facts already exist further down the page, they move up into the
+card rather than being printed twice — that is why the home page's trust strip lives in the hero,
+and why `/about` explains its license in prose without re-listing the number under it.
+
+No stock photography, per `docs/PLAN.md`.
+
+---
+
 ## Commits
 
 **Conventional Commits**, so that changelogs and version bumps derive from history rather than
