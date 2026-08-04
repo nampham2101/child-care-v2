@@ -195,7 +195,11 @@ export default async function Home({
         <h2 id="parent-heading" className="sr-only">
           {t("testimonialHeading")}
         </h2>
-        <blockquote className="max-w-2xl">
+        {/* Centred rather than given a companion card: a quotation is the one thing on
+            this page that wants to sit on its own, and a fact panel beside it would turn
+            a parent's sentence into an exhibit. So the leftover width becomes symmetric
+            margin instead of a hole on the right — see `docs/CONVENTIONS.md`. */}
+        <blockquote className="mx-auto max-w-2xl text-center">
           <p className="text-xl text-ink-900 text-balance sm:text-2xl">
             {t("testimonialQuote")}
           </p>

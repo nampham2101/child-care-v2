@@ -99,6 +99,31 @@ and why `/about` explains its license in prose without re-listing the number und
 
 No stock photography, per `docs/PLAN.md`.
 
+### Mid-page sections follow the same rule, one level down
+
+A section whose entire body is prose leaves the same empty half the hero used to. Two ways out,
+and which one applies is decided by the content, not by the layout:
+
+- **Fill it when there is a fact worth putting there.** A companion element on the right — the
+  same 3/5 to 2/5 split, stacking below `sm` with the prose first. `VisitSection` is the worked
+  example: the call to action asks a parent to phone a stranger about their child, and `VisitCard`
+  answers the four things standing in the way of that call.
+- **Centre it when there is not.** The home page's parent testimonial gets no card. A quotation
+  wants to sit alone, so the block is centred and the leftover width becomes symmetric margin.
+
+**Never widen prose past its measure to fill a container.** That is the failure this rule exists
+to prevent, and it is worse than the empty half.
+
+A section is already fine if cards, a table, or a timeline sit under its intro — "Ratios and group
+sizes", "Safety, on an ordinary day", "A day at Willow Grove". A short intro line above full-width
+content uses the width correctly and needs nothing beside it.
+
+Two rules carry down from the hero. The companion **must not repeat what the prose beside it
+says** — when a fact moves into the card, it comes out of the paragraph rather than appearing
+twice. And when a section repeats across pages, **it is one component**: `/programs` and `/about`
+both render `VisitSection` with their own heading and paragraph, so the pages still to build
+inherit the shape instead of copying it.
+
 ---
 
 ## Commits

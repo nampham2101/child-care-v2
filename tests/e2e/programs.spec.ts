@@ -74,6 +74,13 @@ test.describe("programs page, cold load", () => {
     const callLink = page.getByRole("link", { name: /call .*503/i }).first();
     await expect(callLink).toBeVisible();
     await expect(callLink).toHaveAttribute("href", "tel:+15035550142");
+
+    // The card beside that button is the friction in front of the call — who to ask for
+    // and whether it has to be arranged first. Shared with `/about`, so a regression here
+    // is a regression on both pages.
+    const visit = page.getByRole("region", { name: /which room fits/i });
+    await expect(visit.getByText("Maria, the director")).toBeVisible();
+    await expect(visit.getByText("No appointment needed")).toBeVisible();
   });
 
   test("the page title tells a searcher which page this is", async ({
