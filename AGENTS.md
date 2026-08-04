@@ -8,9 +8,9 @@ commit messages, and branch names are world-readable from the moment they are pu
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
 **Current state:** `v0.1.0` is the released version — the home page is live at
-<https://child-care-v2.netlify.app>. Work targets `v0.2.0`: `/programs`, `/about`, `/staff`,
-`/contact`, and `/faq` are merged to `main` but not released; tuition remains. Merged is not
-shipped — only a published release reaches production.
+<https://child-care-v2.netlify.app>. Work targets `v0.2.0`, and every public page — `/programs`,
+`/about`, `/staff`, `/contact`, `/faq`, and `/tuition` — is merged to `main` but not released.
+Merged is not shipped — only a published release reaches production.
 
 ---
 
