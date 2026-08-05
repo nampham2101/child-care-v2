@@ -153,11 +153,11 @@ addition afterwards — "call us" loses the parent browsing at 10pm after bedtim
 
 ## Tech stack
 
-Versions verified against the npm registry on 2026-07-22.
+Versions verified against the npm registry on 2026-07-22; Next.js re-verified on 2026-08-05.
 
 | Layer | Choice | Version |
 |---|---|---|
-| Framework | Next.js (App Router, TypeScript) | 16.2.11 |
+| Framework | Next.js (App Router, TypeScript) | 16.3.0 |
 | Hosting, CDN, builds | Netlify | — |
 | Netlify Next.js runtime | `@netlify/plugin-nextjs` | 5.15.12 |
 | Netlify CLI | `netlify-cli` | 26.2.0 |
@@ -178,16 +178,22 @@ This was previously carried as an unverified risk. It is now closed with evidenc
 SUPPORTED_NEXT_VERSIONS = ">=13.5.0"
 ```
 
-Open-ended, with no upper bound, so Next.js 16.2.11 passes. The runtime also references Turbopack
+Open-ended, with no upper bound, so Next.js 16.3.0 passes. The runtime also references Turbopack
 internally, which matters because Next 16 builds with Turbopack by default. **No version pin-back is
 needed.** This is now confirmed end to end rather than locally: the `v0.1.0` release deployed to
 production through the runtime plugin and the site serves prerendered pages.
 
-The one residual is cosmetic. Next 16 deprecated the `middleware` file convention in favour of
-`proxy`, so every build prints a deprecation warning for the locale middleware. It still works and
-still builds; whether the plugin runs a `proxy.ts` the same way has to be checked on a real Deploy
-Preview before renaming the file that every first-time visitor's `/`→`/en` redirect depends on.
-Tracked as issue #27 against `v0.3.0`, to revisit at the next runtime bump.
+**Re-checked on 2026-08-05** when Next.js moved 16.2.11 → 16.3.0 for the security bump. The gate in
+`@netlify/plugin-nextjs@5.15.12` is unchanged, the production build succeeds, and every locale route
+is still reported as prerendered. This claim is re-verified whenever Next.js moves, rather than
+assumed to hold.
+
+The one residual is cosmetic and **still present at 16.3.0**. Next 16 deprecated the `middleware`
+file convention in favour of `proxy`, so every build prints a deprecation warning for the locale
+middleware. It still works and still builds; whether the plugin runs a `proxy.ts` the same way has to
+be checked on a real Deploy Preview before renaming the file that every first-time visitor's
+`/`→`/en` redirect depends on. Tracked as issue #27 against `v0.3.0` — the 16.3.0 bump did not
+resolve it, so it stays open.
 
 ### Why Supabase rather than Netlify's own database
 
