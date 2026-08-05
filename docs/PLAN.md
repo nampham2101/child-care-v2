@@ -164,7 +164,7 @@ Versions verified against the npm registry on 2026-07-22.
 | Database, auth, storage | `@supabase/supabase-js` | 2.110.8 |
 | Styling | Tailwind CSS | 4.3.3 |
 | i18n | `next-intl` | 4.13.4 |
-| Testing | Playwright; Vitest when there is logic to unit-test | latest at scaffold |
+| Testing | Playwright (end-to-end), Vitest (unit) | latest at scaffold |
 
 Photos live in Supabase Storage and are optimized on the fly by Netlify's Image CDN, which Next.js
 reaches by setting `remotePatterns` in `next.config.js` — configuration, not custom code.
