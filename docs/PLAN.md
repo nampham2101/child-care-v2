@@ -162,6 +162,7 @@ Versions verified against the npm registry on 2026-07-22; Next.js re-verified on
 | Netlify Next.js runtime | `@netlify/plugin-nextjs` | 5.15.12 |
 | Netlify CLI | `netlify-cli` | 26.2.0 |
 | Database, auth, storage | `@supabase/supabase-js` | 2.110.8 |
+| Migrations | `supabase` CLI (dev dependency) | 2.111.0 |
 | Styling | Tailwind CSS | 4.3.3 |
 | i18n | `next-intl` | 4.13.4 |
 | Testing | Playwright (end-to-end), Vitest (unit) | latest at scaffold |
@@ -384,7 +385,8 @@ mitigation — every change is viewable before it merges.
 | Netlify site created and connected to the repo | **Done** |
 | Production gated to releases: site unlocked, production branch a placeholder, `main` a branch deploy | **Done** |
 | `NETLIFY_AUTH_TOKEN` secret + `NETLIFY_SITE_ID` variable in GitHub Actions | **Done** |
-| Supabase project created, URL and anon key published to GitHub and Netlify | **Needed now** — blocks every `v0.3.0` ticket (issue #44) |
+| Supabase project created, URL and anon key published to GitHub and Netlify | **Done** — project `kdhtodcmxgxfnxrbkkzp`, `us-west-1` (issue #44) |
+| Supabase database password to hand, for the first `supabase db push` | **Needed for issue #47.** A different credential from the anon key; prompted for at the terminal, never committed |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |
 

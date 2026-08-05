@@ -45,11 +45,29 @@ jobs:
 
       # Production build, not `next dev` — a change that only breaks when prerendered
       # should fail here rather than on the Netlify deploy.
+      #
+      # The Supabase variables are repository *variables*, not secrets: the anonymous key
+      # and the project URL are public by design and ship in the client bundle, so masking
+      # them in the log would buy nothing and make a failed build harder to read. Row-level
+      # security is what protects the data. The service-role key is never used in CI.
+      #
+      # These are wired up before anything reads the database (issue #46), so the ticket
+      # that adds the first query opens against a CI configuration that already works.
       - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       # End-to-end tests run against that production build (Playwright's webServer starts
       # `next start`), so the cold-load test exercises the same artefact Netlify publishes.
       # Only the browser the tests use is installed, to keep the job lean.
       - run: npx playwright install --with-deps chromium
 
+      # Playwright's webServer runs `next start`, which serves the prerendered pages built
+      # above and should not touch the database at all. The variables are passed anyway so
+      # that a page which unexpectedly renders on demand fails on its assertion rather than
+      # on a missing-configuration error, which would point at CI instead of at the page.
       - run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

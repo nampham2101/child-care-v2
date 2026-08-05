@@ -17,6 +17,7 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.110.8",
     "next": "16.3.0",
     "next-intl": "4.13.4",
     "react": "19.2.4",
@@ -32,6 +33,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.0",
     "prettier": "^3.6.2",
+    "supabase": "2.111.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
