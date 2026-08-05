@@ -9,9 +9,10 @@ that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
 **Current state:** `v0.2.0` is the released version — all seven public pages are live at
 <https://child-care-v2.netlify.app>: home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, and
-`/contact`. Work now targets `v0.3.0`: Supabase schema, row-level security, and reading content from
-the database at build time. Content is still in the code until then. Merged is not shipped — only a
-published release reaches production.
+`/contact`. Work now targets `v0.3.0`, which is **the data layer only**: Supabase schema, row-level
+security, seed data, and reading content from the database at build time. Authentication, storage,
+and the staff-editable admin UI are `v0.4.0`. Facts move to the database this release; editable prose
+stays in `messages/*.json`. Merged is not shipped — only a published release reaches production.
 
 ---
 
@@ -95,7 +96,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 
 - **v1 is a marketing website**, not the operations platform
 - **No forms.** The conversion action is a phone call
-- **Netlify** for hosting; **Supabase** for database, auth, and storage from `v0.3.0`
+- **Netlify** for hosting; **Supabase** for the database from `v0.3.0`, auth and storage from `v0.4.0`
 - **Content is staff-editable via an admin UI** — this is why a database exists at all
 - **Visual direction is "warm and human"** — built for an anxious parent comparing centers, not to
   look like a site for children
