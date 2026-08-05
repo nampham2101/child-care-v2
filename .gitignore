@@ -17,6 +17,11 @@ dist/
 .env.*
 !.env.example
 
+# Supabase CLI scratch — `supabase link` writes the project ref and connection state here.
+# Machine-local, not shared project setup. The migrations beside it ARE committed.
+supabase/.temp/
+supabase/.branches/
+
 # Testing
 coverage/
 playwright-report/
