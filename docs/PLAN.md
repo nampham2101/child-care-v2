@@ -239,6 +239,34 @@ database in `v0.3.0`, so a user table and an upload table would be schema with n
 There is no `faq` or `about` table. With prose staying in the message catalogues — see below — those
 two pages have no facts to move.
 
+### What `anon` is, and is not, isolated from
+
+Settled while writing the first migration, because it changes what the row-level security suite can
+honestly assert.
+
+The anonymous policy is `status = 'published'` and **nothing else** — it is deliberately not scoped
+to an organization. Draft rows are invisible to `anon` on every table, which is the guarantee that
+matters and is the one being tested. But a second organization's *published* rows would be readable
+by anyone holding the anonymous key.
+
+**This is not a hole that can be closed at the policy level.** The anonymous key ships inside the
+client bundle by design, so any organization scope it carried would be caller-supplied and therefore
+caller-forgeable — a request could simply claim to be another tenant. Scoping `anon` by organization
+would look like isolation while providing none, which is worse than not claiming it.
+
+What makes this acceptable rather than merely unavoidable: a published row is content the tenant is
+publishing on their own public website. It is not private data that leaked; it is marketing copy
+that was already world-readable at its own URL. The private thing is the draft, and the draft is
+protected.
+
+*Tripwire to revisit:* the moment a table holds something that is not public marketing copy —
+enrolment records, incident notes, anything about an actual child — this reasoning expires
+completely. Such a table must not be readable by `anon` under any status, and belongs behind
+`authenticated` with a real organization check.
+
+**Consequence for issue #51:** "an anonymous client cannot read another organization's rows" is not
+satisfiable as written and should be narrowed to drafts.
+
 ### The generic block store is deferred, not built
 
 An earlier draft of this section proposed `pages` (slug, locale, SEO fields, draft-or-published) and

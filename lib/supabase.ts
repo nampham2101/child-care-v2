@@ -14,6 +14,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 
+import type { Database } from "@/lib/database.types";
+
 /**
  * Thrown at module load — deliberately, so a misconfigured build dies on the first import
  * naming the variable that is missing, rather than three frames inside a query with a null
@@ -64,4 +66,11 @@ if (parsedUrl.pathname !== "/") {
   );
 }
 
-export const supabase = createClient(PROJECT_URL, ANON_KEY);
+/**
+ * Typed with the generated schema, which is the whole reason `lib/database.types.ts` is
+ * committed rather than produced at build time: a query naming a column that no longer
+ * exists is then a `npm run typecheck` failure in CI, not a runtime error discovered on a
+ * page a parent is reading. Regenerate the types in the same pull request as the migration
+ * that changes the schema — see supabase/migrations/README.md.
+ */
+export const supabase = createClient<Database>(PROJECT_URL, ANON_KEY);

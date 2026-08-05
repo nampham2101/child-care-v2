@@ -61,6 +61,27 @@ dashboard under Settings → Database, and it is a different credential from the
 in `.env.example`. Linking writes the project ref into `supabase/.temp/`, which is
 gitignored.
 
+## Regenerating the types
+
+`lib/database.types.ts` is generated from the live schema and committed, so that a query
+naming a column that no longer exists fails `npm run typecheck` in CI rather than at runtime.
+
+```bash
+npx supabase gen types typescript --project-id kdhtodcmxgxfnxrbkkzp > lib/database.types.ts
+```
+
+**This command needs a Supabase access token** — `supabase login`, or `SUPABASE_ACCESS_TOKEN`
+in the environment. It is a personal credential, not a project key, and it is not in
+`.env.example` and must not be committed. Without it the command writes a JSON error into the
+file instead of types, which is easy to miss because it exits without printing anything.
+
+Regenerate in the **same pull request** as the migration that changed the schema. A committed
+type file that disagrees with the database is worse than no type file, because it makes
+typecheck confidently wrong.
+
+The file is listed in `.prettierignore` and left exactly as the generator emits it, so
+regenerating shows the schema change rather than several hundred reflowed lines.
+
 ## Rules that keep this directory honest
 
 - **Never edit a migration that has been applied.** The remote history table records what
@@ -70,9 +91,20 @@ gitignored.
   state.
 - Name for the change, not the ticket — `create_content_tables`, not `issue_47`.
 
-## Not yet exercised
+## What has actually been run, and what has not
 
-At the time this README was written, this directory is empty and the link-and-push path has
-not been run against the project. Issue #47 is the first migration and therefore the first
-real test of these instructions. If they turn out to be wrong, correct them in that pull
-request rather than working around them.
+Being precise about this, because "documented" and "verified" are not the same thing.
+
+**`supabase link` and `supabase db push` are still unexercised.** The first migration was
+applied through the Supabase management connector rather than the CLI, because `db push`
+needs the database password and `gen types` needs a personal access token — neither of which
+was available at the time. The commands above are the intended path and are written from the
+CLI's own documented behaviour, not from a successful run.
+
+The consequence to know about: the remote migration history records version
+`20260805025214`, and the file in this directory is named to match. A `db push` from a
+freshly linked machine should therefore treat it as already applied rather than trying to
+re-run it — but **that has not been observed**. Verify it with `db push --dry-run`, which
+prints what it would do without doing it, before trusting it.
+
+If the instructions turn out to be wrong, correct them in the pull request that finds out.
