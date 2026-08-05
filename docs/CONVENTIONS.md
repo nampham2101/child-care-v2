@@ -151,6 +151,65 @@ the commit is doing too much.
 Trunk-based. Short-lived branches off `main`, named `type/short-description` — `feat/staff-editor`,
 `fix/mobile-nav-overflow`.
 
+### Branch off `main`, not off another pull request
+
+Small and independent is the default, and it is a mechanical rule rather than a stylistic
+preference: **a pull request based on another unmerged pull request will break when the parent
+merges.**
+
+The worked example, because it happened here. #57 was opened with #56 as its base, since it edited a
+paragraph #56 introduced. The moment #56 was squash-merged, #57 reported a conflict — and nothing
+had actually diverged. Squash replaces the parent's commits with a **single new commit with a new
+SHA**, so #57 still carried the original. Git's merge base for #57 stayed at the commit *before*
+#56, which made it look as though `main` and #57 had independently rewritten the same paragraph,
+when #57's version was a strict superset of it.
+
+The fix is one command, with no manual conflict resolution:
+
+```bash
+git rebase --onto origin/main <the parent branch's old tip> <branch>
+```
+
+So, in order of preference:
+
+1. **Branch off `main`.** Independent work has none of this problem.
+2. **If work genuinely depends on unmerged work, wait for the parent to merge.**
+3. **If it cannot wait, rebase the moment the parent lands.** Do not leave a stacked pull request
+   sitting — the longer it sits, the more it looks like an ordinary conflict to whoever finds it.
+
+**The Deploy Preview is the more expensive half of this.** A stacked pull request's preview builds
+against the *parent* branch, so what a reviewer looks at is not what merging to `main` would
+produce. On a site whose review gate is "check the preview on a real phone", that is worse than the
+conflict: a conflict announces itself, and a preview quietly showing the wrong thing does not.
+
+### The merge strategy is not the lever
+
+**Squash merge stays.** It is what keeps `main` at exactly one Conventional Commit per pull request,
+which is what makes "version bumps derive from history" in this document true rather than
+aspirational. Both alternatives were considered and rejected; they are recorded here so nobody
+re-derives them:
+
+- **Merge commits** would genuinely fix it. The parent's original commits become ancestors of
+  `main`, so the merge base moves forward and there is nothing to conflict. The cost is every
+  intermediate commit plus a merge bubble on `main`, which destroys the one-commit-per-pull-request
+  history this repository's versioning depends on. Not worth paying permanently for a problem that
+  only appears when pull requests are stacked.
+- **"Rebase and merge" does not fix it.** GitHub rewrites every commit with a new SHA when it
+  rebases, producing exactly the same mismatch as squash. It looks like the answer and is not.
+
+**This is a cost of stacking, not a cost of squashing.** Two independent branches off `main` are
+untouched by it — #58 went through the same merge with no trouble at all.
+
+### Merged branches are deleted automatically
+
+`delete_branch_on_merge` is enabled on the repository, so the remote branch disappears the moment
+its pull request merges. There is no manual cleanup step, and a branch still on the remote is
+therefore work in flight rather than debris — which is the property that makes the branch list worth
+reading at all.
+
+The local copy survives the remote deletion. `git branch -d <branch>` after merging, or
+`git fetch --prune` to drop the stale remote-tracking refs.
+
 ### A PR does one thing
 
 When something fixable turns up that is outside the assigned task:
@@ -183,7 +242,8 @@ Every PR is self-reviewed against this before merge:
 - [ ] Shared logic extracted rather than duplicated
 - [ ] Tests cover the real user path, not just a convenient trigger
 - [ ] Conventions in this file still hold, or are updated in this PR
-- [ ] Deploy Preview checked on a real phone for any visual change
+- [ ] Deploy Preview checked on a real phone for any visual change — and branched off `main`, so
+      the preview shows what merging would actually produce
 - [ ] Labelled to match its commit type, so the release notes group correctly
 - [ ] Staged with explicit paths — never `git add -A`, which sweeps in untracked files
 
