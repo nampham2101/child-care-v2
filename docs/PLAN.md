@@ -202,21 +202,71 @@ enough to outweigh a separate auth service, reopen this.
 
 ---
 
-## Proposed data model
+## Data model
 
 Every content table carries `org_id` from the first migration, with row-level security on from day
 one.
 
-| Table | Purpose |
+### `v0.3.0` is the data layer only
+
+Schema, row-level security, seed data, and pages reading content at build time. **Authentication,
+storage, and the staff-editable admin UI are `v0.4.0`**, as the delivery table below has always had
+them.
+
+### Entity tables that mirror `lib/`
+
+| Table | Source module |
 |---|---|
 | `orgs` | Tenancy root. One row in v1 |
-| `profiles` | Staff users → `auth.users`, carries `org_id` and role (`owner` / `editor`) |
-| `pages` | Page shell: slug, locale, SEO title and description, draft-or-published |
-| `page_blocks` | Ordered content blocks per page — `type` plus `data` JSONB |
-| `programs` | Age-banded programs (infant / toddler / preschool / pre-K) |
-| `staff` | Team bios and photos |
-| `site_settings` | Phone, email, address, hours, map link, social links |
-| `media` | Uploaded images: storage path, alt text, dimensions |
+| `site_settings` | `lib/center.ts` |
+| `programs`, `daily_rhythm` | `lib/programs.ts` |
+| `staff` | `lib/staff.ts` |
+| `tuition_schedules`, `tuition_rates`, `tuition_fees` | `lib/tuition.ts` |
+
+Columns and constraints are specified on issue #47 and stay there. Repeating a column list in this
+document guarantees the two drift, and the migration is the thing that is actually true.
+
+`profiles`, `media`, and Supabase Storage arrive with the admin UI in `v0.4.0`. Nothing writes to the
+database in `v0.3.0`, so a user table and an upload table would be schema with no caller.
+
+There is no `faq` or `about` table. With prose staying in the message catalogues — see below — those
+two pages have no facts to move.
+
+### The generic block store is deferred, not built
+
+An earlier draft of this section proposed `pages` (slug, locale, SEO fields, draft-or-published) and
+`page_blocks` (`type` plus a `data` JSONB payload): a generic content system in which any page is an
+ordered list of untyped blocks.
+
+**That is not what `v0.3.0` builds.** Seven fixed pages do not need an untyped block store. Adopting
+one would turn every typed constant in `lib/` into JSON that TypeScript cannot check — `lib/tuition.ts`
+currently makes a missing room rate a compile error — and it would buy no editing capability
+whatsoever until the admin UI exists. The cost lands this release; the benefit does not.
+
+*Tripwire to revisit:* the admin UI needing genuinely free-form pages — a staff member adding a page
+or reordering sections without a developer. That is a legitimate requirement and it may well arrive
+with `v0.4.0`. Reopen this decision when it does, rather than bending entity tables into a block
+store one column at a time.
+
+### Editable prose stays in `messages/*.json` for `v0.3.0`
+
+Only facts move to the database this release. Room names, staff bios, headings, FAQ answers, and
+every other piece of visible copy stay in the message catalogues, keyed by the `key` and `label_key`
+columns above.
+
+**The cost, stated plainly rather than discovered later:** when `v0.3.0` ships, center staff still
+cannot edit a single word of copy. Every fact on the site becomes editable and no sentence does.
+`/faq` and `/about`, which are almost entirely prose, gain nothing at all.
+
+**The migration does not disappear — it moves.** `v0.4.0`'s admin UI needs a second migration to
+bring prose into the database, together with a decision about how translated copy is stored per
+locale. That work is deferred, not avoided, and `v0.4.0` should be estimated knowing it is there.
+
+Why that is the right trade: the two halves fail differently. A wrong ratio or a wrong monthly rate
+is a fact a parent acts on, and those are exactly the values that were duplicated across pages before
+`lib/` centralised them — so they are the ones worth putting behind a single editable source first.
+Prose is already single-sourced in the catalogues and is safe where it is until there is an editor to
+edit it with.
 
 **Row-level security rules:**
 - Anonymous role: `SELECT` only, only rows where `status = 'published'`.
@@ -278,7 +328,7 @@ Then: publish GitHub Release `v0.1.0` → production deploys.
 |---|---|
 | `v0.2.0` | Remaining static pages: programs, about, staff, tuition, FAQ, contact |
 | `v0.3.0` | Supabase schema, RLS, seed data; content read from the database at build time |
-| `v0.4.0` | Admin UI: staff login, block editor, image upload, publish triggers rebuild |
+| `v0.4.0` | Auth and storage: staff login, content editor, prose migration, image upload, publish triggers rebuild |
 | `v1.0.0` | Launch prep: real content, performance and accessibility pass, legal pages, domain |
 
 ---
@@ -328,7 +378,7 @@ mitigation — every change is viewable before it merges.
 | Netlify site created and connected to the repo | **Done** |
 | Production gated to releases: site unlocked, production branch a placeholder, `main` a branch deploy | **Done** |
 | `NETLIFY_AUTH_TOKEN` secret + `NETLIFY_SITE_ID` variable in GitHub Actions | **Done** |
-| Supabase project created | Not needed until `v0.3.0` |
+| Supabase project created, URL and anon key published to GitHub and Netlify | **Needed now** — blocks every `v0.3.0` ticket (issue #44) |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |
 
