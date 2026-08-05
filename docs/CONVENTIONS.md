@@ -18,6 +18,7 @@ app/                      Next.js App Router
   [locale]/               Public, locale-prefixed pages
   admin/                  Staff-only admin area
 lib/                      Shared logic — the single home for anything used twice
+  *.test.ts               Vitest, beside the module it covers
   supabase/               Database client, typed queries
   content/                Content fetching and mapping
 components/
@@ -201,11 +202,22 @@ not catch the author's own design blind spots. Deploy Previews and the release g
   read unpublished rows and cannot read another organization's rows.
 - **Tests before big refactors.** Load-bearing logic is never rewritten without a safety net first.
 
-CI gates merge on: **typecheck, lint, production build, and end-to-end tests.**
+Unit tests live beside the module they cover, as `*.test.ts` — the naming table above. `tests/e2e/`
+is Playwright's alone, and `npm run test:unit` is scoped to `lib/` so the two runners never try to
+execute each other's files.
 
-Unit tests join that gate when there is pure logic worth testing, and a Lighthouse budget when there
-are enough pages to budget. Neither is in the gate today. Config for a test runner with nothing
-meaningful to run is theatre — this line moves when the tests do, in the same PR that adds them.
+CI gates merge on: **typecheck, lint, formatting, unit tests, production build, and end-to-end
+tests.** Unit tests run before the build, because they need neither the build nor a browser and
+finish in under a second.
+
+Unit tests joined that gate with the currency formatting in `lib/tuition.ts` and the tenure
+arithmetic in `lib/staff.ts` — the first logic here that was worth testing apart from the page
+rendering it, and the safety net the `v0.3.0` conversion of those modules to database queries is
+refactored against.
+
+A Lighthouse budget is still not in the gate, and joins it when there are enough pages to budget.
+Config for a test runner with nothing meaningful to run is theatre — that line moves when the tests
+do, in the same PR that adds them.
 
 ---
 

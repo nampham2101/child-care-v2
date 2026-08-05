@@ -28,7 +28,7 @@ visitor's request path: it is read at build time and written only from the admin
 | Hosting, CDN, builds | Netlify |
 | Database, auth, storage | Supabase |
 | Styling | Tailwind CSS |
-| Testing | Playwright (end-to-end). Vitest joins when there is pure logic worth unit-testing |
+| Testing | Vitest (unit, for the pure logic in `lib/`) and Playwright (end-to-end) |
 
 Exact versions are resolved in `package-lock.json`, which is committed — CI and Netlify install
 from it, so a build is never a different dependency tree than the one that was tested.
@@ -47,7 +47,8 @@ npm run dev
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier, writing changes (`format:check` to only report) |
-| `npm run test:e2e` | Playwright, against a cold first-time page load |
+| `npm run test:unit` | Vitest, over the pure logic in `lib/`. Needs no build |
+| `npm run test:e2e` | Playwright, against a cold first-time page load. Run `npm run build` first |
 
 Node version is pinned in `.nvmrc` and read from there by CI and Netlify, so there is one place to
 change it. Netlify platform features run locally via `netlify dev`.

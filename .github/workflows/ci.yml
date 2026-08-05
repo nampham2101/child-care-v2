@@ -1,7 +1,8 @@
 name: CI
 
-# Gates the merge. Playwright joins this list with the home page, and the row-level
-# security suite joins it with the Supabase schema at v0.3.0.
+# Gates the merge. Playwright joined this list with the home page, Vitest with the first
+# pure logic in lib/, and the row-level security suite joins it with the Supabase schema
+# at v0.3.0.
 on:
   pull_request:
   push:
@@ -19,7 +20,7 @@ permissions:
 
 jobs:
   verify:
-    name: Typecheck, lint, build
+    name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -36,6 +37,11 @@ jobs:
       - run: npm run lint
 
       - run: npm run format:check
+
+      # Unit tests before the build, because they need neither one and finish in under a
+      # second. A broken rate calculation should fail the job in seconds rather than after
+      # a full production build and a browser download.
+      - run: npm run test:unit
 
       # Production build, not `next dev` — a change that only breaks when prerendered
       # should fail here rather than on the Netlify deploy.
