@@ -3,8 +3,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { PROGRAM_BANDS } from "@/lib/programs";
-import { FEES, SCHEDULES, formatRate, lowestFullTimeRate } from "@/lib/tuition";
+import { getProgramBands } from "@/lib/programs";
+import {
+  formatRate,
+  getFees,
+  getSchedules,
+  lowestFullTimeRate,
+} from "@/lib/tuition";
 
 /**
  * `/tuition` — the page most centers do not have, because most centers make you call.
@@ -53,6 +58,15 @@ export default async function Tuition({ params }: PageProps) {
   const t = await getTranslations("TuitionPage");
   const tBands = await getTranslations("Programs");
 
+  // `getSchedules` guarantees every schedule carries a rate for every band, so the grid
+  // below cannot render a blank cell where a price belongs — a guarantee the type system
+  // used to make and the schema cannot. See `@/lib/tuition`.
+  const [bands, schedules, fees] = await Promise.all([
+    getProgramBands(),
+    getSchedules(),
+    getFees(),
+  ]);
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
       {/* The card holds the sums that are not the monthly rate. Every figure in the table
@@ -61,7 +75,9 @@ export default async function Tuition({ params }: PageProps) {
           get from the table is what else they will be charged, so that is what sits
           beside the promise. See `docs/CONVENTIONS.md`. */}
       <PageHero
-        eyebrow={t("eyebrow", { lowest: formatRate(lowestFullTimeRate()) })}
+        eyebrow={t("eyebrow", {
+          lowest: formatRate(lowestFullTimeRate(schedules)),
+        })}
         heading={t("heading")}
         headingId="tuition-heading"
         intro={t("intro")}
@@ -71,12 +87,12 @@ export default async function Tuition({ params }: PageProps) {
               {
                 label: t("factRegistrationLabel"),
                 value: t("factRegistrationValue", {
-                  amount: formatRate(FEES.registration),
+                  amount: formatRate(fees.registration),
                 }),
               },
               {
                 label: t("factDepositLabel"),
-                value: t("factDepositValue", { weeks: FEES.depositWeeks }),
+                value: t("factDepositValue", { weeks: fees.depositWeeks }),
               },
               {
                 label: t("factIncludedLabel"),
@@ -84,7 +100,7 @@ export default async function Tuition({ params }: PageProps) {
               },
               {
                 label: t("factNoticeLabel"),
-                value: t("factNoticeValue", { weeks: FEES.noticeWeeks }),
+                value: t("factNoticeValue", { weeks: fees.noticeWeeks }),
               },
             ]}
           />
@@ -120,7 +136,7 @@ export default async function Tuition({ params }: PageProps) {
                 >
                   {t("ratesRoom")}
                 </th>
-                {SCHEDULES.map((schedule) => (
+                {schedules.map((schedule) => (
                   <th
                     key={schedule.key}
                     scope="col"
@@ -132,7 +148,7 @@ export default async function Tuition({ params }: PageProps) {
               </tr>
             </thead>
             <tbody>
-              {PROGRAM_BANDS.map((band) => (
+              {bands.map((band) => (
                 <tr key={band.key} className="border-b border-border">
                   <th
                     scope="row"
@@ -140,7 +156,7 @@ export default async function Tuition({ params }: PageProps) {
                   >
                     {tBands(band.key)}
                   </th>
-                  {SCHEDULES.map((schedule) => (
+                  {schedules.map((schedule) => (
                     <td
                       key={schedule.key}
                       className="py-4 pr-4 whitespace-nowrap text-ink-900 tabular-nums sm:pr-6"
@@ -172,7 +188,7 @@ export default async function Tuition({ params }: PageProps) {
         </h2>
         <p className="mt-2 max-w-xl text-ink-700">{t("schedulesBody")}</p>
         <div className="mt-8 grid gap-5 sm:grid-cols-3">
-          {SCHEDULES.map((schedule) => (
+          {schedules.map((schedule) => (
             <article
               key={schedule.key}
               className="rounded-2xl border border-border bg-surface p-6"
@@ -221,8 +237,8 @@ export default async function Tuition({ params }: PageProps) {
               </h3>
               <p className="mt-3 text-ink-700">
                 {t(`hidden${key}Body`, {
-                  amount: formatRate(FEES.latePickupPerMinute),
-                  percent: FEES.siblingDiscountPercent,
+                  amount: formatRate(fees.latePickupPerMinute),
+                  percent: fees.siblingDiscountPercent,
                 })}
               </p>
             </article>

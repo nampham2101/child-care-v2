@@ -4,7 +4,7 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { StaffCard } from "@/components/site/StaffCard";
 import { VisitSection } from "@/components/site/VisitSection";
-import { averageTenure, STAFF, yearsWith } from "@/lib/staff";
+import { averageTenure, getStaff, yearsWith } from "@/lib/staff";
 
 /**
  * `/staff` — the page that expands the home page's three-person strip into the whole team.
@@ -46,11 +46,12 @@ export default async function Staff({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations("StaffPage");
+  const staff = await getStaff();
 
   // Derived rather than written down, so nothing here goes quietly stale on the first of
-  // January. `STAFF` is ordered leadership-first, so the longest tenure is found rather
+  // January. The list is ordered leadership-first, so the longest tenure is found rather
   // than assumed to be the director's.
-  const longestTenure = Math.max(...STAFF.map(yearsWith));
+  const longestTenure = Math.max(...staff.map(yearsWith));
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -58,17 +59,17 @@ export default async function Staff({ params }: PageProps) {
           and the one a parent can hold up against the center down the road. `stack`
           rather than `stat`: the last value is a sentence, not a figure. */}
       <PageHero
-        eyebrow={t("eyebrow", { count: STAFF.length })}
+        eyebrow={t("eyebrow", { count: staff.length })}
         heading={t("heading")}
         headingId="staff-heading"
         intro={t("intro")}
         card={
           <HeroFacts
             facts={[
-              { label: t("factTeamLabel"), value: String(STAFF.length) },
+              { label: t("factTeamLabel"), value: String(staff.length) },
               {
                 label: t("factTenureLabel"),
-                value: t("yearsValue", { years: averageTenure() }),
+                value: t("yearsValue", { years: averageTenure(staff) }),
               },
               {
                 label: t("factLongestLabel"),
@@ -94,7 +95,7 @@ export default async function Staff({ params }: PageProps) {
         </h2>
         <p className="mt-2 max-w-xl text-ink-700">{t("teamBody")}</p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {STAFF.map((person) => (
+          {staff.map((person) => (
             <StaffCard key={person.key} person={person} showBio />
           ))}
         </div>

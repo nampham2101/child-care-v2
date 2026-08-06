@@ -5,8 +5,8 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { StaffCard } from "@/components/site/StaffCard";
 import { getCenter } from "@/lib/center";
-import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
-import { FEATURED_STAFF } from "@/lib/staff";
+import { getProgramBands } from "@/lib/programs";
+import { featuredStaff, getStaff } from "@/lib/staff";
 
 /**
  * The home page — the single page v0.1.0 shipped, now living under `/[locale]`.
@@ -25,17 +25,6 @@ import { FEATURED_STAFF } from "@/lib/staff";
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
 
-// One sentence per band — the summary that makes a parent open `/programs`, where the
-// full detail lives. Keyed by band so it cannot fall out of step with the shared list.
-const BAND_BLURBS: Record<ProgramBandKey, string> = {
-  infants:
-    "One primary caregiver per child, so feeds, naps, and first words are tracked by someone who knows your baby — not whoever is free.",
-  toddlers:
-    "Room to move and language everywhere. Days are predictable so a toddler learning the world can count on what comes next.",
-  preschool:
-    "Early literacy, numbers, and the harder work of taking turns and naming feelings — the groundwork for kindergarten.",
-};
-
 export default async function Home({
   params,
 }: {
@@ -47,6 +36,8 @@ export default async function Home({
   const t = await getTranslations("HomePage");
   const tBands = await getTranslations("Programs");
   const center = await getCenter();
+  const bands = await getProgramBands();
+  const featured = featuredStaff(await getStaff());
 
   // Derived here rather than at module scope, where it used to sit: the facts are now
   // fetched per render, and a module-level constant would also have frozen "this year" at
@@ -97,7 +88,7 @@ export default async function Home({
           {t("programsHeading")}
         </h2>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PROGRAM_BANDS.map((band) => (
+          {bands.map((band) => (
             <article
               key={band.key}
               className="flex flex-col rounded-2xl border border-border bg-surface p-6"
@@ -111,7 +102,7 @@ export default async function Home({
                 </span>
               </div>
               <p className="mt-1 text-sm text-ink-500">{band.ageLabel}</p>
-              <p className="mt-3 text-ink-700">{BAND_BLURBS[band.key]}</p>
+              <p className="mt-3 text-ink-700">{t(`${band.key}Blurb`)}</p>
             </article>
           ))}
         </div>
@@ -148,7 +139,7 @@ export default async function Home({
         {/* Three of the seven, without bios — this is an introduction, and `/staff` is
             where the question of who these people are actually gets answered. */}
         <div className="mt-8 grid gap-5 sm:grid-cols-3">
-          {FEATURED_STAFF.map((person) => (
+          {featured.map((person) => (
             <StaffCard key={person.key} person={person} />
           ))}
         </div>

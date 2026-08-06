@@ -5,7 +5,7 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getCenter } from "@/lib/center";
-import { PROGRAM_BANDS } from "@/lib/programs";
+import { getProgramBands } from "@/lib/programs";
 
 /**
  * `/programs` — the page a parent opens second, after deciding the home page is worth
@@ -49,23 +49,17 @@ export default async function Programs({ params }: PageProps) {
   const t = await getTranslations("ProgramsPage");
   const tBands = await getTranslations("Programs");
   const center = await getCenter();
+  const bands = await getProgramBands();
 
-  // Detail and staffing copy is per-band, so the key is built from the band key rather
-  // than written out three times. `as const` on PROGRAM_BANDS keeps these keys checked.
-  const bandCopy = {
-    infants: {
-      detail: t("infantsDetail"),
-      staffing: t("infantsStaffing"),
-    },
-    toddlers: {
-      detail: t("toddlersDetail"),
-      staffing: t("toddlersStaffing"),
-    },
-    preschool: {
-      detail: t("preschoolDetail"),
-      staffing: t("preschoolStaffing"),
-    },
-  };
+  // Detail and staffing copy is per-band, so the message key is built from the band key
+  // rather than written out three times. The keys used to be a checked literal union; they
+  // come from the database now, so `tests/content/` asserts every one has a message.
+  const bandCopy = Object.fromEntries(
+    bands.map((band) => [
+      band.key,
+      { detail: t(`${band.key}Detail`), staffing: t(`${band.key}Staffing`) },
+    ]),
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -78,7 +72,7 @@ export default async function Programs({ params }: PageProps) {
         intro={t("intro")}
         card={
           <HeroFacts
-            facts={PROGRAM_BANDS.map((band) => ({
+            facts={bands.map((band) => ({
               label: tBands(band.key),
               value: `${band.ratio} · ${band.groupSize}`,
             }))}
@@ -89,7 +83,7 @@ export default async function Programs({ params }: PageProps) {
       {/* One section per room, youngest-first. The facts panel repeats the age range that
           sits under the heading — a parent scanning only the panels should not have to
           look back up to know which ages it describes. */}
-      {PROGRAM_BANDS.map((band) => (
+      {bands.map((band) => (
         <article
           key={band.key}
           id={band.key}

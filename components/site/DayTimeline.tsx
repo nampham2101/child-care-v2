@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { DAILY_RHYTHM } from "@/lib/programs";
+import { getDailyRhythm } from "@/lib/programs";
 
 /**
  * The daily rhythm as a vertical timeline.
@@ -13,10 +13,11 @@ import { DAILY_RHYTHM } from "@/lib/programs";
  */
 export async function DayTimeline() {
   const t = await getTranslations("Day");
+  const rhythm = await getDailyRhythm();
 
   return (
     <ol className="max-w-xl">
-      {DAILY_RHYTHM.map((slot) => (
+      {rhythm.map((slot) => (
         <li
           key={slot.time}
           className="flex gap-4 border-l-2 border-sage-200 pb-6 pl-5 last:pb-0"

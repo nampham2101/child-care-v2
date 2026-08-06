@@ -43,19 +43,23 @@ jobs:
       # a full production build and a browser download.
       - run: npm run test:unit
 
-      # Row-level security, against the real hosted project — mocking a database behaviour
-      # would only ever prove the mock agrees with the assertions. It asserts that drafts are
-      # invisible to the anonymous key and that the key cannot write to any table.
+      # The suites that need the real hosted project — mocking a database behaviour would
+      # only ever prove the mock agrees with the assertions. Two of them:
       #
-      # It does NOT assert that another organization's published rows are invisible: the
-      # anonymous policy is `status = 'published'` and nothing else, deliberately, because
-      # this key ships in the client bundle and any organization scope it carried would be
-      # forgeable. docs/PLAN.md records that in full.
+      #   - Row-level security: drafts are invisible to the anonymous key, and the key cannot
+      #     write to any table. It does NOT assert that another organization's published rows
+      #     are invisible — the anonymous policy is `status = 'published'` and nothing else,
+      #     deliberately, because this key ships in the client bundle and any organization
+      #     scope it carried would be forgeable. docs/PLAN.md records that in full.
+      #   - Message keys: every key the content queries return has copy in every catalogue.
+      #     That join used to be checked by the compiler, when the keys were `as const`
+      #     literal unions. It cannot be now, and a band with no message renders a blank card
+      #     that reads like a CSS bug.
       #
       # Separate from test:unit so the fast gate stays hermetic — an unreachable project
       # should fail here, plainly, rather than making the pure-logic suite look broken.
-      # Before the build, because a policy regression is worth failing on in seconds.
-      - run: npm run test:rls
+      # Before the build, because either regression is worth failing on in seconds.
+      - run: npm run test:db
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
