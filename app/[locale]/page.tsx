@@ -4,7 +4,7 @@ import { DayTimeline } from "@/components/site/DayTimeline";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { StaffCard } from "@/components/site/StaffCard";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 import { PROGRAM_BANDS, type ProgramBandKey } from "@/lib/programs";
 import { FEATURED_STAFF } from "@/lib/staff";
 
@@ -24,8 +24,6 @@ import { FEATURED_STAFF } from "@/lib/staff";
  *
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
-
-const yearsOperating = new Date().getFullYear() - CENTER.yearsOperatingSince;
 
 // One sentence per band — the summary that makes a parent open `/programs`, where the
 // full detail lives. Keyed by band so it cannot fall out of step with the shared list.
@@ -48,6 +46,12 @@ export default async function Home({
 
   const t = await getTranslations("HomePage");
   const tBands = await getTranslations("Programs");
+  const center = await getCenter();
+
+  // Derived here rather than at module scope, where it used to sit: the facts are now
+  // fetched per render, and a module-level constant would also have frozen "this year" at
+  // the moment the module was first imported.
+  const yearsOperating = new Date().getFullYear() - center.yearsOperatingSince;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -56,21 +60,21 @@ export default async function Home({
           in here so the hero's right half carries proof instead of empty space, and so
           the same four facts are not stated twice within one screen. */}
       <PageHero
-        eyebrow={t("heroEyebrow", { ageRange: CENTER.ageRange })}
+        eyebrow={t("heroEyebrow", { ageRange: center.ageRange })}
         heading={t("heroHeading")}
         headingId="hero-heading"
-        intro={t("heroBody", { neighborhood: CENTER.neighborhood })}
+        intro={t("heroBody", { neighborhood: center.neighborhood })}
         card={
           <HeroFacts
             variant="stat"
             facts={[
-              { value: CENTER.infantRatio, label: t("trustInfantRatio") },
+              { value: center.infantRatio, label: t("trustInfantRatio") },
               {
                 value: `${yearsOperating} years`,
                 label: t("trustYearsCaring"),
               },
               { value: "7am–6pm", label: t("trustOpenWeekdays") },
-              { value: CENTER.licenseNumber, label: t("trustStateLicense") },
+              { value: center.licenseNumber, label: t("trustStateLicense") },
             ]}
           />
         }
@@ -192,16 +196,16 @@ export default async function Home({
                   {t("contactAddress")}
                 </dt>
                 <dd className="text-ink-900">
-                  {CENTER.address.line1}
+                  {center.address.line1}
                   <br />
-                  {CENTER.address.line2}
+                  {center.address.line2}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-ink-500">
                   {t("contactHours")}
                 </dt>
-                <dd className="text-ink-900">{CENTER.hoursShort}</dd>
+                <dd className="text-ink-900">{center.hoursShort}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-ink-500">
@@ -209,10 +213,10 @@ export default async function Home({
                 </dt>
                 <dd>
                   <a
-                    href={CENTER.phoneHref}
+                    href={center.phoneHref}
                     className="text-sage-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:outline-none"
                   >
-                    {CENTER.phoneDisplay}
+                    {center.phoneDisplay}
                   </a>
                 </dd>
               </div>
@@ -226,7 +230,7 @@ export default async function Home({
             aria-hidden="true"
             className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-sage-50 text-sm text-sage-700"
           >
-            {t("mapLabel", { neighborhood: CENTER.neighborhood })}
+            {t("mapLabel", { neighborhood: center.neighborhood })}
           </div>
         </div>
       </section>

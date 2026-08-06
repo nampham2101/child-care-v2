@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
 /**
@@ -24,9 +24,6 @@ import { PROGRAM_BANDS } from "@/lib/programs";
  */
 
 type PageProps = { params: Promise<{ locale: string }> };
-
-// ICU renders a raw 2009 as "2,009" — the year is a label, so it is passed as a string.
-const licensedSince = String(CENTER.yearsOperatingSince);
 
 // The three beliefs, in the order a parent's worry arrives: who holds my child, what
 // their day is like, and whether I will be told the truth about it. Keys name the strings
@@ -57,10 +54,14 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "AboutPage" });
+  const center = await getCenter();
 
   return {
     title: t("metaTitle"),
-    description: t("metaDescription", { since: licensedSince }),
+    // ICU renders a raw 2009 as "2,009" — the year is a label, so it is passed as a string.
+    description: t("metaDescription", {
+      since: String(center.yearsOperatingSince),
+    }),
   };
 }
 
@@ -70,6 +71,10 @@ export default async function About({ params }: PageProps) {
 
   const t = await getTranslations("AboutPage");
   const tBands = await getTranslations("Programs");
+  const center = await getCenter();
+
+  // ICU renders a raw 2009 as "2,009" — the year is a label, so it is passed as a string.
+  const licensedSince = String(center.yearsOperatingSince);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -84,7 +89,7 @@ export default async function About({ params }: PageProps) {
         card={
           <HeroFacts
             facts={[
-              { label: t("licensingNumberLabel"), value: CENTER.licenseNumber },
+              { label: t("licensingNumberLabel"), value: center.licenseNumber },
               { label: t("licensingSinceLabel"), value: licensedSince },
               {
                 label: t("licensingInspectionsLabel"),
