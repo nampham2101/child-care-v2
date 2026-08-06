@@ -9,3 +9,8 @@ package-lock.json
 # Prose is hand-wrapped at 100 columns and hand-aligned in tables. Prettier reflows both,
 # which turns every documentation edit into a diff nobody can read.
 *.md
+
+# Generated from the database schema, never edited by hand. Left exactly as the generator
+# emits it so regenerating produces a diff showing the schema change and nothing else —
+# reformatting it would bury one renamed column in several hundred reflowed lines.
+lib/database.types.ts
