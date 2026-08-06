@@ -4,7 +4,7 @@ import { DayTimeline } from "@/components/site/DayTimeline";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 import { PROGRAM_BANDS } from "@/lib/programs";
 
 /**
@@ -48,6 +48,7 @@ export default async function Programs({ params }: PageProps) {
 
   const t = await getTranslations("ProgramsPage");
   const tBands = await getTranslations("Programs");
+  const center = await getCenter();
 
   // Detail and staffing copy is per-band, so the key is built from the band key rather
   // than written out three times. `as const` on PROGRAM_BANDS keeps these keys checked.
@@ -71,7 +72,7 @@ export default async function Programs({ params }: PageProps) {
       {/* The card is the three ratios, which is what a parent opens this page to find.
           The rooms below give each one its context; the hero gives the numbers first. */}
       <PageHero
-        eyebrow={t("eyebrow", { ageRange: CENTER.ageRange })}
+        eyebrow={t("eyebrow", { ageRange: center.ageRange })}
         heading={t("heading")}
         headingId="programs-heading"
         intro={t("intro")}

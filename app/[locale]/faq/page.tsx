@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 
 /**
  * `/faq` — the questions parents ask on the phone, including the ones they cannot ask on
@@ -70,6 +70,7 @@ export default async function Faq({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations("FaqPage");
+  const center = await getCenter();
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -84,7 +85,7 @@ export default async function Faq({ params }: PageProps) {
         card={
           <HeroFacts
             facts={[
-              { label: t("factAgesLabel"), value: CENTER.ageRange },
+              { label: t("factAgesLabel"), value: center.ageRange },
               {
                 label: t("factCountLabel"),
                 value: String(QUESTION_COUNT),

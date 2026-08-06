@@ -10,7 +10,7 @@ import {
 import { SiteNav } from "@/components/site/SiteNav";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -58,6 +58,7 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
   const tFooter = await getTranslations("Footer");
+  const center = await getCenter();
 
   return (
     <html lang={locale} className={`${geistSans.variable} h-full antialiased`}>
@@ -74,7 +75,7 @@ export default async function LocaleLayout({
                 href="/"
                 className="rounded-sm text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-4 focus-visible:ring-offset-background focus-visible:outline-none"
               >
-                {CENTER.name}
+                {center.name}
               </Link>
               <SiteNav />
             </div>
@@ -86,16 +87,16 @@ export default async function LocaleLayout({
               than being re-inlined per page where the license number would drift. */}
           <footer className="border-t border-border">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-5 py-8 text-sm text-ink-500">
-              <p className="font-medium text-ink-700">{CENTER.name}</p>
+              <p className="font-medium text-ink-700">{center.name}</p>
               <p>
                 {tFooter("tagline", {
-                  licenseNumber: CENTER.licenseNumber,
+                  licenseNumber: center.licenseNumber,
                   // A string, not the raw number — ICU would render 2009 as "2,009".
-                  since: String(CENTER.yearsOperatingSince),
+                  since: String(center.yearsOperatingSince),
                 })}
               </p>
               <p>
-                {CENTER.address.line1}, {CENTER.address.line2}
+                {center.address.line1}, {center.address.line2}
               </p>
             </div>
           </footer>

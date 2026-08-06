@@ -4,7 +4,7 @@ import { CallButton } from "@/components/site/CallButton";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { CENTER } from "@/lib/center";
+import { getCenter } from "@/lib/center";
 
 /**
  * `/contact` — the page a parent opens once they have decided to act.
@@ -52,8 +52,9 @@ export default async function Contact({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations("ContactPage");
+  const center = await getCenter();
 
-  const address = `${CENTER.address.line1}, ${CENTER.address.line2}`;
+  const address = `${center.address.line1}, ${center.address.line2}`;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -70,16 +71,16 @@ export default async function Contact({ params }: PageProps) {
           <HeroFacts
             facts={[
               { label: t("factAddressLabel"), value: address },
-              { label: t("factHoursLabel"), value: CENTER.hoursShort },
+              { label: t("factHoursLabel"), value: center.hoursShort },
               { label: t("factClosedLabel"), value: t("factClosedValue") },
               {
                 label: t("factEmailLabel"),
                 value: (
                   <a
-                    href={CENTER.emailHref}
+                    href={center.emailHref}
                     className="text-sage-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:outline-none"
                   >
-                    {CENTER.emailDisplay}
+                    {center.emailDisplay}
                   </a>
                 ),
               },
