@@ -26,11 +26,14 @@ components/
   site/                   Public site components
   admin/                  Admin-only components
 messages/                 i18n message catalogues, one file per locale
-supabase/migrations/      SQL migrations, applied in order
+supabase/
+  migrations/             SQL migrations, applied in order
+  fixtures/               Rows that exist only to be tested against
 docs/                     This directory
   adr/                    Architecture decision records
 tests/
   e2e/                    Playwright
+  rls/                    Row-level security, against the real project
 ```
 
 **Shared logic lives in one place.** If a helper is needed in two places, it moves to `lib/` in the
@@ -259,16 +262,31 @@ not catch the author's own design blind spots. Deploy Previews and the release g
   no logged-in state, no warm cache. That is how every visitor actually arrives, and testing a
   convenient trigger instead has hidden real bugs before.
 - **Row-level security tests** are mandatory for every new table: assert an anonymous client cannot
-  read unpublished rows and cannot read another organization's rows.
+  read unpublished rows, and cannot insert, update, or delete. They live in `tests/rls/` and run
+  against the **real hosted project** — row-level security is a database behaviour, and a mocked
+  client proves only that the mock agrees with the assertions.
+
+  They do **not** assert that another organization's published rows are invisible. That is not a
+  guarantee `anon` can carry — the key ships in the client bundle, so any organization scope would
+  be forgeable. `docs/PLAN.md` sets out the reasoning and the tripwire that voids it: the first
+  table holding anything that is not public marketing copy.
+
+  Assert a refusal by its error code, not merely that an error came back. A malformed payload also
+  produces an error, and a test that accepts any failure passes on a table that grants writes.
 - **Tests before big refactors.** Load-bearing logic is never rewritten without a safety net first.
 
 Unit tests live beside the module they cover, as `*.test.ts` — the naming table above. `tests/e2e/`
 is Playwright's alone, and `npm run test:unit` is scoped to `lib/` so the two runners never try to
 execute each other's files.
 
-CI gates merge on: **typecheck, lint, formatting, unit tests, production build, and end-to-end
-tests.** Unit tests run before the build, because they need neither the build nor a browser and
-finish in under a second.
+CI gates merge on: **typecheck, lint, formatting, unit tests, row-level security, production build,
+and end-to-end tests.** Unit tests run before the build, because they need neither the build nor a
+browser and finish in under a second; the row-level security suite runs next, because a policy
+regression is worth failing on in seconds rather than after a build and a browser download.
+
+`npm run test:unit` and `npm run test:rls` are separate commands with separate Vitest configs on
+purpose. The unit suite is hermetic — no network, no credentials — and folding a database test into
+it would make an unreachable project look like broken logic.
 
 Unit tests joined that gate with the currency formatting in `lib/tuition.ts` and the tenure
 arithmetic in `lib/staff.ts` — the first logic here that was worth testing apart from the page

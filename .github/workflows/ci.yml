@@ -43,6 +43,23 @@ jobs:
       # a full production build and a browser download.
       - run: npm run test:unit
 
+      # Row-level security, against the real hosted project — mocking a database behaviour
+      # would only ever prove the mock agrees with the assertions. It asserts that drafts are
+      # invisible to the anonymous key and that the key cannot write to any table.
+      #
+      # It does NOT assert that another organization's published rows are invisible: the
+      # anonymous policy is `status = 'published'` and nothing else, deliberately, because
+      # this key ships in the client bundle and any organization scope it carried would be
+      # forgeable. docs/PLAN.md records that in full.
+      #
+      # Separate from test:unit so the fast gate stays hermetic — an unreachable project
+      # should fail here, plainly, rather than making the pure-logic suite look broken.
+      # Before the build, because a policy regression is worth failing on in seconds.
+      - run: npm run test:rls
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
       # Production build, not `next dev` — a change that only breaks when prerendered
       # should fail here rather than on the Netlify deploy.
       #

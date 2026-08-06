@@ -436,7 +436,8 @@ visitors either way. Realistic ongoing cost: **$0–40/month**.
 **In CI on every PR:** typecheck, lint, production build, and Playwright against a **cold
 first-time page load** — no warm cache, no logged-in state, because that is how every visitor
 actually arrives. From `v0.3.0`, an RLS suite asserting an anonymous client cannot read draft rows
-or another organization's rows.
+and cannot write to any table — narrowed from "or another organization's rows", which the section
+above explains is not satisfiable and would be a claim of isolation that does not exist.
 
 **Per milestone:**
 - `v0.1.0` — merging main leaves production untouched; publishing the release deploys it; rollback
