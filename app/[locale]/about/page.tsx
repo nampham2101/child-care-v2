@@ -4,7 +4,7 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getCenter } from "@/lib/center";
-import { PROGRAM_BANDS } from "@/lib/programs";
+import { getProgramBands } from "@/lib/programs";
 
 /**
  * `/about` — the page a parent opens when they have decided the center looks plausible
@@ -72,6 +72,7 @@ export default async function About({ params }: PageProps) {
   const t = await getTranslations("AboutPage");
   const tBands = await getTranslations("Programs");
   const center = await getCenter();
+  const bands = await getProgramBands();
 
   // ICU renders a raw 2009 as "2,009" — the year is a label, so it is passed as a string.
   const licensedSince = String(center.yearsOperatingSince);
@@ -167,7 +168,7 @@ export default async function About({ params }: PageProps) {
               </tr>
             </thead>
             <tbody>
-              {PROGRAM_BANDS.map((band) => (
+              {bands.map((band) => (
                 <tr key={band.key} className="border-b border-border">
                   <th
                     scope="row"
