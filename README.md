@@ -5,9 +5,10 @@ content themselves.
 
 **Live site:** <https://child-care-v2.netlify.app>
 
-> **Status: in progress (`v0.2.0`).** All seven public pages are live. Content still comes from the
-> code rather than a database, and the admin area is not built — those are `v0.3.0` and `v0.4.0`.
-> See [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
+> **Status: in progress (`v0.3.0`).** All seven public pages are live, and their facts — hours,
+> rates, ratios, staff, licence number — now come from the database. The admin area is not built
+> yet, so editing still means SQL, and page copy still lives in the message catalogues. Both are
+> `v0.4.0`. See [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
 
 ## What this is
 

@@ -7,12 +7,20 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.2.0` is the released version — all seven public pages are live at
+**Current state:** `v0.3.0` is the released version — all seven public pages are live at
 <https://child-care-v2.netlify.app>: home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, and
-`/contact`. Work now targets `v0.3.0`, which is **the data layer only**: Supabase schema, row-level
-security, seed data, and reading content from the database at build time. Authentication, storage,
-and the staff-editable admin UI are `v0.4.0`. Facts move to the database this release; editable prose
-stays in `messages/*.json`. Merged is not shipped — only a published release reaches production.
+`/contact`, now reading their **facts** from Supabase at build time. Row-level security is on, and
+the anonymous key can read published rows only.
+
+Work now targets `v0.4.0`: staff login, the content editor, the prose migration, image upload, and
+publish triggering a rebuild. Two things follow from that split, and both bite the unwary:
+
+- **No one can edit anything yet.** `v0.3.0` shipped a database with no editor — every fact is
+  editable in principle and only through SQL in practice. That gap is the whole of `v0.4.0`.
+- **Prose is still in `messages/*.json`**, all 282 strings of it. Moving it is a `v0.4.0` migration,
+  not a thing that already happened.
+
+Merged is not shipped — only a published release reaches production.
 
 ---
 
@@ -117,7 +125,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, self-review checklist, release policy |
-| GitHub Issues | The task queue. Milestone `v0.3.0` is the current target |
+| GitHub Issues | The task queue. Milestone `v0.4.0` is the current target |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
