@@ -101,6 +101,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 - **Visual direction is "warm and human"** — built for an anxious parent comparing centers, not to
   look like a site for children
 - **The center is a fictional placeholder** with placeholder imagery
+- **No photographs of people.** Staff are monograms; imagery is illustration or the facility itself
 - **The public site is static.** The database is never in a visitor's request path
 - **Multi-tenant-ready schema** (`org_id` from migration one) even though one center uses it
 
