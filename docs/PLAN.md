@@ -437,7 +437,9 @@ visitors either way. Realistic ongoing cost: **$0–40/month**.
 first-time page load** — no warm cache, no logged-in state, because that is how every visitor
 actually arrives. From `v0.3.0`, an RLS suite asserting an anonymous client cannot read draft rows
 and cannot write to any table — narrowed from "or another organization's rows", which the section
-above explains is not satisfiable and would be a claim of isolation that does not exist.
+above explains is not satisfiable and would be a claim of isolation that does not exist. Alongside
+it, a content-key suite asserting every key the database returns has copy in every catalogue: the
+join that `as const` used to check and the compiler no longer can.
 
 **Per milestone:**
 - `v0.1.0` — merging main leaves production untouched; publishing the release deploys it; rollback

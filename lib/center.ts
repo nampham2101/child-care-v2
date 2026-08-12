@@ -17,17 +17,8 @@
  */
 import { cache } from "react";
 
+import { CENTER_ORG_SLUG, requireRow } from "@/lib/content";
 import { supabase } from "@/lib/supabase";
-
-/**
- * Which organization this site renders. Every content query filters on it.
- *
- * The anonymous policy is `status = 'published'` and carries no organization scope — see
- * `docs/PLAN.md` — so a query without this filter would happily return another tenant's
- * published rows. `supabase/fixtures/rls.sql` keeps a deliberately absurd published row in a
- * second organization so that forgetting is visible rather than silent.
- */
-export const CENTER_ORG_SLUG = "willow-grove";
 
 /**
  * The shape the pages consume, which is deliberately the shape the old constant had: display
@@ -49,14 +40,6 @@ export type Center = {
   address: { line1: string; line2: string };
   neighborhood: string;
 };
-
-/** Thrown when the build cannot get the facts it is supposed to render. */
-export class CenterContentError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CenterContentError";
-  }
-}
 
 /**
  * `cache` deduplicates this within a single render pass. The layout, the page, and
@@ -82,41 +65,20 @@ export const getCenter = cache(async (): Promise<Center> => {
     // PostgREST's PGRST116, which reads like a query bug rather than absent content.
     .maybeSingle();
 
-  if (error) {
-    throw new CenterContentError(
-      `Could not read site_settings for "${CENTER_ORG_SLUG}": ${error.message}. ` +
-        "The build needs the database; see supabase/README.md.",
-    );
-  }
-
-  // A missing row comes back as null with no error, so this is the branch that actually
-  // catches an unseeded database — and it must throw rather than fall back.
-  //
-  // There is deliberately no fallback to the old hardcoded values. A site that quietly
-  // serves stale placeholder facts whenever the row is absent is worse than a build that
-  // stops: the license number and the ratio are what a parent acts on, and nobody would ever
-  // find out they had gone stale. Failing here costs a red build; the alternative costs
-  // trust, silently.
-  if (!data) {
-    throw new CenterContentError(
-      `No published site_settings row for organization "${CENTER_ORG_SLUG}". ` +
-        "Apply supabase/seed.sql — see supabase/README.md. Note that a draft row is " +
-        "invisible to the anonymous key and looks identical to a missing one from here.",
-    );
-  }
+  const row = requireRow(data, error, "Could not read site settings");
 
   return {
-    name: data.orgs.name,
-    phoneDisplay: data.phone_display,
-    phoneHref: data.phone_href,
-    emailDisplay: data.email_display,
-    emailHref: data.email_href,
-    licenseNumber: data.license_number,
-    yearsOperatingSince: data.years_operating_since,
-    ageRange: data.age_range,
-    infantRatio: data.infant_ratio,
-    hoursShort: data.hours_short,
-    address: { line1: data.address_line1, line2: data.address_line2 },
-    neighborhood: data.neighborhood,
+    name: row.orgs.name,
+    phoneDisplay: row.phone_display,
+    phoneHref: row.phone_href,
+    emailDisplay: row.email_display,
+    emailHref: row.email_href,
+    licenseNumber: row.license_number,
+    yearsOperatingSince: row.years_operating_since,
+    ageRange: row.age_range,
+    infantRatio: row.infant_ratio,
+    hoursShort: row.hours_short,
+    address: { line1: row.address_line1, line2: row.address_line2 },
+    neighborhood: row.neighborhood,
   };
 });

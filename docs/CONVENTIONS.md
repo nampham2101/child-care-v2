@@ -34,6 +34,7 @@ docs/                     This directory
 tests/
   e2e/                    Playwright
   rls/                    Row-level security, against the real project
+  content/                Database keys against message catalogues
 ```
 
 **Shared logic lives in one place.** If a helper is needed in two places, it moves to `lib/` in the
@@ -273,20 +274,41 @@ not catch the author's own design blind spots. Deploy Previews and the release g
 
   Assert a refusal by its error code, not merely that an error came back. A malformed payload also
   produces an error, and a test that accepts any failure passes on a table that grants writes.
+- **Content-key tests** are mandatory for every column that joins a database row to a message
+  catalogue. They live in `tests/content/` and run against the real project for the same reason.
+
+  This exists because the conversion to database content **gave up a compile-time guarantee**.
+  `PROGRAM_BANDS`, `STAFF`, and `SCHEDULES` were `as const` arrays, so their keys were literal
+  union types and a row with no matching copy was a type error. Keys come from the database now,
+  and a band nothing translates renders a blank heading — which reads as a CSS bug and sends
+  whoever finds it looking in the wrong place. Assert both directions, over every catalogue in
+  `messages/`, not only `en.json`.
 - **Tests before big refactors.** Load-bearing logic is never rewritten without a safety net first.
+
+**A module that exports pure helpers must not import the Supabase client at the top level.**
+`lib/supabase.ts` validates its configuration at module load and throws when the variables are
+absent, so a top-level import makes the whole module unloadable without credentials — and takes
+the pure functions down with it, which is exactly what keeps them cheap to test. Import the client
+inside the query instead. `lib/staff.ts` and `lib/tuition.ts` are the worked examples.
+
+**Derived helpers take their rows as an argument.** `averageTenure(staff)`, not
+`averageTenure()` reading a module constant. It is what lets the fast suite check the arithmetic
+against a fixture in milliseconds instead of against a seeded project over a network.
 
 Unit tests live beside the module they cover, as `*.test.ts` — the naming table above. `tests/e2e/`
 is Playwright's alone, and `npm run test:unit` is scoped to `lib/` so the two runners never try to
 execute each other's files.
 
-CI gates merge on: **typecheck, lint, formatting, unit tests, row-level security, production build,
-and end-to-end tests.** Unit tests run before the build, because they need neither the build nor a
-browser and finish in under a second; the row-level security suite runs next, because a policy
-regression is worth failing on in seconds rather than after a build and a browser download.
+CI gates merge on: **typecheck, lint, formatting, unit tests, the database suites, production
+build, and end-to-end tests.** Unit tests run before the build, because they need neither the build
+nor a browser and finish in under a second; the database suites run next, because a policy or
+content regression is worth failing on in seconds rather than after a build and a browser download.
 
-`npm run test:unit` and `npm run test:rls` are separate commands with separate Vitest configs on
+`npm run test:unit` and `npm run test:db` are separate commands with separate Vitest configs on
 purpose. The unit suite is hermetic — no network, no credentials — and folding a database test into
-it would make an unreachable project look like broken logic.
+it would make an unreachable project look like broken logic. `test:db` covers both `tests/rls/` and
+`tests/content/`: one command for everything that needs the real project, rather than a new script
+each time a suite does.
 
 Unit tests joined that gate with the currency formatting in `lib/tuition.ts` and the tenure
 arithmetic in `lib/staff.ts` — the first logic here that was worth testing apart from the page
