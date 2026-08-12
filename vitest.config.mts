@@ -17,7 +17,11 @@ export default defineConfig({
     // Explicit, because Vitest's default glob also matches `.spec.ts` and would sweep up
     // `tests/e2e/` — Playwright specs, which fail immediately outside a Playwright runner.
     // The two suites are separate commands on purpose; neither should run the other's files.
-    include: ["lib/**/*.test.ts"],
+    //
+    // `scripts/` is here for the build-cache guard (issue #67). It sits beside the script it
+    // covers, the way `lib/staff.test.ts` sits beside `lib/staff.ts`, and it needs no
+    // database — so it belongs in this fast run rather than in `npm run test:db`.
+    include: ["lib/**/*.test.ts", "scripts/**/*.test.mjs"],
   },
   resolve: {
     // Vitest does not read `paths` from tsconfig.json, so the `@/` alias the source uses is

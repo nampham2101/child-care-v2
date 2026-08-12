@@ -283,6 +283,37 @@ or reordering sections without a developer. That is a legitimate requirement and
 with `v0.4.0`. Reopen this decision when it does, rather than bending entity tables into a block
 store one column at a time.
 
+### The build clears Next's fetch cache, so Publish cannot serve stale facts
+
+Settled on issue #67, because the publish loop this whole project is built on depends on it.
+
+`next build` writes every `fetch` into `.next/cache/fetch-cache` with a one-year lifetime, and the
+content queries go through that patched `fetch`. A rebuild against a warm cache therefore renders
+the **previous** content — with no error, no warning, and a deploy reporting success. Reproduced
+locally in both directions: with a warm cache a changed `site_settings` row did not reach the built
+HTML; after clearing the cache it did.
+
+**`npm run build` now clears `fetch-cache` before and after the build**, via the `prebuild` and
+`postbuild` hooks in `package.json`. Nothing else in `.next/cache` is touched — the Turbopack and
+TypeScript caches are pure build speed with no correctness stake.
+
+**The obvious fix is the wrong one.** Marking the queries `cache: "no-store"` was tried first and
+fails the build: Next 16 treats a no-store fetch as a dynamic API, so every page reading the
+center's settings stops prerendering. This document rules out putting Supabase in a visitor's
+request path, so that trades a silent staleness bug for a louder architectural one. Clearing the
+cache keeps all seven pages prerendered. Deduplication *within* a build is `cache()` in the query
+modules and is unaffected.
+
+**Production was never exposed, and that is not why this was fixed.** `@netlify/plugin-nextjs`
+`5.15.12` deletes `fetch-cache` before saving the build cache it restores between deploys, so a
+Netlify rebuild always fetched fresh rows. That is an undocumented implementation detail of a pinned
+version — one line in a bundled file — not a guarantee anyone promised us. The correctness of the
+publish loop now rests on this repository instead of on a transitive dependency's internals.
+
+**Tripwire:** if a future runtime bump makes builds slower and someone reaches for "restore more of
+the cache", this decision is the reason not to. `scripts/clear-fetch-cache.test.mjs` fails if the
+script or its hooks are removed.
+
 ### Editable prose stays in `messages/*.json` for `v0.3.0`
 
 Only facts move to the database this release. Room names, staff bios, headings, FAQ answers, and

@@ -7,7 +7,9 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/clear-fetch-cache.mjs",
     "build": "next build",
+    "postbuild": "node scripts/clear-fetch-cache.mjs",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
