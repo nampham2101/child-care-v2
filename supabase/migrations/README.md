@@ -95,16 +95,42 @@ regenerating shows the schema change rather than several hundred reflowed lines.
 
 Being precise about this, because "documented" and "verified" are not the same thing.
 
-**`supabase link` and `supabase db push` are still unexercised.** The first migration was
-applied through the Supabase management connector rather than the CLI, because `db push`
+**`supabase link` and `supabase db push` are still unexercised.** Every migration so far has
+been applied through the Supabase management connector rather than the CLI, because `db push`
 needs the database password and `gen types` needs a personal access token — neither of which
-was available at the time. The commands above are the intended path and are written from the
-CLI's own documented behaviour, not from a successful run.
+has been available. The commands above are the intended path and are written from the CLI's
+own documented behaviour, not from a successful run.
 
-The consequence to know about: the remote migration history records version
-`20260805025214`, and the file in this directory is named to match. A `db push` from a
-freshly linked machine should therefore treat it as already applied rather than trying to
-re-run it — but **that has not been observed**. Verify it with `db push --dry-run`, which
-prints what it would do without doing it, before trusting it.
+The consequence to know about: the remote migration history records the same versions as the
+filenames in this directory. A `db push` from a freshly linked machine should therefore treat
+them as already applied rather than trying to re-run them — but **that has not been
+observed**. Verify it with `db push --dry-run`, which prints what it would do without doing
+it, before trusting it.
+
+### The connector stamps its own version — reconcile the filename afterwards
+
+Found in #72, and it will bite anyone who follows the two sections above in order.
+
+`npx supabase migration new <name>` timestamps the file at the moment it is created. The
+management connector timestamps the migration at the moment it is *applied*, ignoring the
+filename entirely. Those are minutes apart, so the file and the remote history end up
+disagreeing — which is the exact drift `db push` would later try to resolve by re-running a
+migration that has already run.
+
+When applying through the connector, apply first and name the file second:
+
+```bash
+npx supabase migration list
+```
+
+Take the version the connector recorded, and rename the local file to match it. `#72` did
+this by hand for `20260813023202_create_profiles.sql`.
+
+### Regenerating types without a personal access token
+
+`gen types` needs `SUPABASE_ACCESS_TOKEN`, which has never been present on this machine. The
+management connector generates the same output without one, and its output has been checked
+against the committed file's format — same generator, same shape. Either route is fine;
+what matters is that the result lands in the same pull request as the migration.
 
 If the instructions turn out to be wrong, correct them in the pull request that finds out.

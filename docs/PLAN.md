@@ -256,8 +256,48 @@ them.
 Columns and constraints are specified on issue #47 and stay there. Repeating a column list in this
 document guarantees the two drift, and the migration is the thing that is actually true.
 
-`profiles`, `media`, and Supabase Storage arrive with the admin UI in `v0.4.0`. Nothing writes to the
-database in `v0.3.0`, so a user table and an upload table would be schema with no caller.
+`media` and Supabase Storage arrive with the upload feature later in `v0.4.0`. `profiles` landed
+first, in #72, because every other `v0.4.0` ticket sits on top of it.
+
+### What `profiles` decided, and what it deliberately did not (#72)
+
+`current_org_id()` now reads `public.profiles` instead of returning `NULL`, and **no policy on any
+content table was edited** to make that happen — the indirection the first migration paid for is
+what let one function body switch the whole release on.
+
+Three decisions worth not re-deriving:
+
+- **`security definer`, with `set search_path = ''`.** The policy on `profiles` calls this function
+  and the function reads `profiles`, so without elevation the lookup recurses. The empty search path
+  is load-bearing rather than stylistic: a `security definer` function with a mutable path is the
+  textbook privilege-escalation shape.
+- **`profiles` grants `SELECT` to `authenticated` and nothing else.** Every content policy trusts
+  `current_org_id()`, and `current_org_id()` trusts `profiles.org_id` — so a member able to write
+  that column could move itself into another organization and gain full write access through
+  policies all behaving exactly as designed. There would be no bug anywhere to find. Accounts are
+  therefore created and moved by the service role only. *Tripwire:* if #73 or a later ticket wants
+  staff to edit their own display name, that needs a column-scoped policy, not a blanket `for all`.
+- **`role` (`admin` | `editor`) is recorded but not yet read.** No policy branches on it. It exists
+  now because adding a column to a populated table is a data migration and adding it here was free.
+
+*Verified against the database rather than reasoned about:* an `anon` session does **not** need
+`EXECUTE` on `current_org_id()` — policies are role-scoped, and no `to anon` policy calls it — while
+`authenticated` does, failing with `42501` without it. The first migration granted both on wrong
+reasoning; `20260813023402_restrict_current_org_id_to_authenticated.sql` is the correction.
+
+**Accepted risk:** the database linter warns that `authenticated` can call `current_org_id()` over
+`/rest/v1/rpc/`. The grant cannot be removed without rewriting the policy on every content table,
+and the function takes no arguments and returns the caller's own organization id — a member learns
+something it already knew. *Tripwire:* if this function ever takes an argument, that judgement
+expires with it.
+
+**Accounts are invite-only. There is no self-service signup.** Decided by the owner on #72: a public
+childcare site has no reason to let strangers create accounts. Supabase Auth permits self-signup by
+default, so turning it off is an explicit owner task rather than something the schema can enforce —
+it is in the prerequisites table below, and #73 builds against it. Note what the schema *can*
+enforce, and does: an account with no `profiles` row gets `NULL` from `current_org_id()` and
+therefore matches nothing, so a stranger who did sign up would hold a session that can read and
+write exactly nothing. The setting is the front door; the missing profile row is the deadbolt.
 
 There is no `faq` or `about` table. With prose staying in the message catalogues — see below — those
 two pages have no facts to move.
@@ -478,6 +518,8 @@ human. That is accepted for a release that takes untrusted input for the first t
 | `NETLIFY_AUTH_TOKEN` secret + `NETLIFY_SITE_ID` variable in GitHub Actions | **Done** |
 | Supabase project created, URL and anon key published to GitHub and Netlify | **Done** — project `kdhtodcmxgxfnxrbkkzp`, `us-west-1` (issue #44) |
 | Supabase database password to hand, for the first `supabase db push` | **Needed for issue #47.** A different credential from the anon key; prompted for at the terminal, never committed |
+| Self-service signup turned off in Supabase Auth | **Needed for issue #72 to be green.** Dashboard → Authentication → Sign In / Providers → disable "Allow new users to sign up". Supabase allows it by default, so this is an explicit step |
+| Test account `rls-fixture@example.com` created, and `SUPABASE_TEST_PASSWORD` set as a GitHub **secret** | **Needed for issue #72 to be green.** Dashboard → Authentication → Users → Add user, "Auto Confirm User" ticked. Then re-run `supabase/fixtures/rls.sql`. The authenticated row-level security suite cannot run without it, and fails loudly rather than skipping |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |
 
@@ -503,6 +545,15 @@ and cannot write to any table — narrowed from "or another organization's rows"
 above explains is not satisfiable and would be a claim of isolation that does not exist. Alongside
 it, a content-key suite asserting every key the database returns has copy in every catalogue: the
 join that `as const` used to check and the compiler no longer can.
+
+From `v0.4.0` (#72) a second RLS suite runs beside it, signing in as a real account and asserting the
+half the anonymous suite cannot: a member reads and writes exactly its own organization's rows,
+drafts included, is refused on every other organization's, and cannot move itself between them. It
+signs in for real because `current_org_id()` resolves from the session's `auth.uid()` — there is
+nothing client-side to stub. That makes it the one CI step carrying a genuine secret, and the reason
+the account belongs to the fixture organization rather than to the live center: a member can write
+everything its organization owns, so this credential's blast radius is deliberately two rows whose
+text reads "FIXTURE — must never be visible".
 
 **Per milestone:**
 - `v0.1.0` — merging main leaves production untouched; publishing the release deploys it; rollback
