@@ -36,7 +36,7 @@ operations platform is built on.
 
 | Decision | Call |
 |---|---|
-| Visual direction | **Warm and human** — warm neutral base, single sage accent, photography-led |
+| Visual direction | **Warm and human** — warm neutral base, single sage accent, no photographs of people |
 | Design rationale | Built for an anxious parent comparing centers, not to look like a site "for children" |
 | Mobile | Designed and checked mobile-first; most traffic is a parent on a phone |
 
@@ -126,15 +126,38 @@ competence reads as trustworthy. Saturated primaries read as generic.
 Deliberately absent: forms, chat widgets, and generic stock photography of smiling children —
 parents recognize stock instantly, and it costs trust rather than building it.
 
-### Photography risk
+### Photography — v1 ships no photographs of people
 
-Placeholder imagery is agreed for the build. Two things must be true before a real launch:
+**Decided after `v0.3.0`.** Staff are represented by the monogram initials already built, and
+imagery is illustration or photographs of the facility. No photographs of staff, and none of
+children.
+
+This mostly ratifies what exists. The site has no images at all today — no `public/` directory, no
+image files, no `next/image` anywhere — and that was the built design rather than an omission:
+`StaffCard` renders `initialsOf(person.name)`, and both map blocks are commented "a calm block, not
+a stock photo". What the decision changes is the future: the monograms are the **finished state**,
+not a placeholder waiting for portraits.
+
+**Why.** The center is a fictional placeholder, so any photograph of a person would be stock or
+generated. Both fail, and they fail in the same direction:
 
 - **Stock images of children cannot represent a real named center.** Presenting them as this
   center's children and rooms is misrepresentation, and parents notice.
-- **Real photographs of children require signed parental photo-release consent.** This is legal
-  exposure, not technical. If releases are not obtainable, the design works with photographs of the
-  facility instead — rooms, garden, reading corner — which perform nearly as well.
+- **Generated photographs of children are the expensive kind of placeholder.** They read as real
+  children and are hard to distinguish from real children, so they quietly become a trust problem
+  with exactly the audience this site is written for — a parent deciding whether the people here are
+  careful. "Those are not our children" is not a conversation worth inheriting.
+
+**What this closes.** Photo-release consent, which was the legal exposure in this section and half
+of open question 1. With no photographs of people there is no consent to obtain and no policy to
+write.
+
+**What it does not close, and the tripwire.** If this stops being a fictional placeholder and
+someone wants real photographs of real children, the consent question returns in full: signed
+parental photo-release, per child, before a single image ships. This decision is the reason that
+question can be deferred — not a reason it disappeared. Facility photographs — rooms, garden,
+reading corner — carry none of this and stay available; `v0.4.0`'s upload feature is scoped to
+exactly those.
 
 ---
 
@@ -477,8 +500,8 @@ join that `as const` used to check and the compiler no longer can.
   by republishing the previous deploy works. **Rollback is tested before it is needed.**
 - `v0.2.0` — every page reviewed on a Deploy Preview on a real phone, not a resized desktop window
 - `v0.3.0` — flip a row to `published`, rebuild, confirm it appears
-- `v0.4.0` — full staff loop: log in → edit a bio → upload a photo → publish → live within ~2
-  minutes. Then log out and confirm `/admin` is unreachable.
+- `v0.4.0` — full staff loop: log in → edit a bio → upload an image of a room → publish → live
+  within ~2 minutes. Then log out and confirm `/admin` is unreachable.
 - `v1.0.0` — Lighthouse against the production domain, structured data validated with Google's Rich
   Results Test, keyboard-only pass through every page
 
@@ -487,7 +510,9 @@ join that `as const` used to check and the compiler no longer can.
 ## Open questions
 
 1. **Real center details.** When this stops being a fictional placeholder, the name, address, phone,
-   license number, and age ranges are needed — plus a decision on photography consent.
+   license number, and age ranges are needed. Photography consent is no longer part of this
+   question — v1 ships no photographs of people, which is decided above along with the tripwire that
+   would reopen it.
 2. **What the center differentiates on.** The hard part of a marketing site is the positioning, not
    the code. Copy quality decides whether this converts.
 3. **Analytics.** Netlify's own analytics is a paid add-on; a lightweight privacy-friendly

@@ -17,7 +17,11 @@ import { averageTenure, getStaff, yearsWith } from "@/lib/staff";
  *
  * The team list comes from `@/lib/staff`, shared with the home page, so the two can never
  * introduce the same person with two different tenures. Copy is placeholder in the home
- * page's voice; real bios are a v1.0.0 task, and portraits replace the monograms then.
+ * page's voice; real bios are a v1.0.0 task.
+ *
+ * The monograms are the finished state, not a placeholder waiting for portraits. v1 ships no
+ * photographs of people — see docs/PLAN.md for the reasoning and for the tripwire that would
+ * reopen it.
  *
  * A Server Component with no interactivity — nothing here needs `"use client"`.
  */
