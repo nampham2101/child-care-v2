@@ -72,11 +72,15 @@ These rules exist because they were broken before. Follow them literally.
 - Open the pull request. **Stop there.** The user merges.
 - Do not merge, even when CI is green, even when the change is trivial, even when the agreed model
   says merging is yours. Ask, or wait.
+- **From `v0.4.0` the user reviews the pull request before merging it.** Green CI is not the go
+  signal for a merge; their review is. Write the description for someone reviewing the diff, because
+  now someone is.
 
 ### Do not push to production
 
 Merging does not deploy. Publishing a GitHub Release deploys. **Never create or publish a release.**
-That is the user's gate and the only one they have.
+That is the user's production gate, and from `v0.4.0` it is the second of two — PR review is the
+first. Both are theirs; neither is yours to pass on their behalf.
 
 ### Scope
 
@@ -125,7 +129,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 | Path | Contents |
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
-| `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, self-review checklist, release policy |
+| `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, who reviews, release policy |
 | GitHub Issues | The task queue. Milestone `v0.4.0` is the current target |
 | GitHub Releases | The release history. There is no changelog file |
 

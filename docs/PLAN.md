@@ -449,13 +449,22 @@ label is harmless: the PR falls into an "Other" group.
 Version numbers follow from the commit types since the last release — any `feat:` means a minor
 bump, only `fix:` means a patch, a `!` means major.
 
-### An accepted consequence
+### Two gates from `v0.4.0`
 
-Because production is gated at the release rather than at PR review, **`main` may contain code the
-owner has not reviewed**, and changes bundle between releases. That is deliberate: owner attention
-goes on running software rather than on diffs. The consequence to accept is that when something
-breaks after a release, the suspect list is a batch rather than a single PR. Deploy Previews are the
-mitigation — every change is viewable before it merges.
+Through `v0.3.0` there was one gate: production was gated at the release rather than at PR review,
+so **`main` could contain code the owner had not reviewed**. That was deliberate — owner attention
+on running software rather than on diffs — and it fitted seven read-only prerendered pages, where a
+Deploy Preview showed a reviewer exactly what a visitor would get.
+
+**From `v0.4.0` the owner also reviews every pull request before it merges.** The release remains
+the production gate; review is added ahead of it, not substituted for it. The reason is that
+`v0.4.0` writes to the database, authenticates real sessions, accepts uploaded files, and adds the
+first dynamic routes — and a Deploy Preview cannot show a reviewer what an *unauthorized* visitor
+reaches, which is exactly where those failures live. `docs/CONVENTIONS.md` carries the full
+reasoning.
+
+The cost is the one that was being avoided: owner time goes on diffs again, and merges wait on a
+human. That is accepted for a release that takes untrusted input for the first time.
 
 ---
 
@@ -517,6 +526,11 @@ join that `as const` used to check and the compiler no longer can.
    the code. Copy quality decides whether this converts.
 3. **Analytics.** Netlify's own analytics is a paid add-on; a lightweight privacy-friendly
    alternative is likely better. Decide before `v1.0.0`.
+4. **Whether owner review before merge outlives `v0.4.0`.** It was added because `v0.4.0` writes,
+   authenticates, and accepts uploads. Deliberately not decided here — whoever plans `v1.0.0` should
+   decide it against that release's risk, not inherit this one's. The question to ask then is
+   whether a Deploy Preview would show a reviewer the failure; when it would, the older
+   release-gated model is defensible again.
 
 ---
 
