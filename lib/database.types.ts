@@ -79,6 +79,41 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          org_id: string
+          role: Database["public"]["Enums"]["profile_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id: string
+          org_id: string
+          role?: Database["public"]["Enums"]["profile_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          org_id?: string
+          role?: Database["public"]["Enums"]["profile_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       programs: {
         Row: {
           age_label: string
@@ -390,6 +425,7 @@ export type Database = {
     }
     Enums: {
       content_status: "draft" | "published"
+      profile_role: "admin" | "editor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -518,6 +554,7 @@ export const Constants = {
   public: {
     Enums: {
       content_status: ["draft", "published"],
+      profile_role: ["admin", "editor"],
     },
   },
 } as const
