@@ -8,10 +8,12 @@ import { defineConfig } from "vitest/config";
 /**
  * The suites that need the real database, deliberately a separate Vitest run from `test:unit`.
  *
- * Two of them now, and they are here for the same reason:
+ * Two directories now, and they are here for the same reason:
  *
  *   - `tests/rls/` — row-level security is a database behaviour, and mocking it would only
- *     prove the mock agrees with the assertions.
+ *     prove the mock agrees with the assertions. `authenticated.test.ts` goes further and
+ *     signs in with a real password, because `current_org_id()` reads the session's
+ *     `auth.uid()` and there is nothing client-side to stub that out with.
  *   - `tests/content/` — that every key in the database has a matching message. Both halves of
  *     that join have to be real for the answer to mean anything.
  *
@@ -31,8 +33,13 @@ export default defineConfig({
     // names by default, and these are named for Next's convention. In CI there is no
     // `.env.local` and the workflow supplies them as repository variables instead.
     //
-    // Both are public by design and ship in the client bundle. The service-role key is not
-    // loaded here and must never be: it bypasses every policy this suite exists to assert.
+    // The empty prefix also picks up SUPABASE_TEST_PASSWORD, which the authenticated suite
+    // signs in with. That one is a genuine secret — a GitHub secret rather than a variable —
+    // unlike the two public values beside it; it has no `NEXT_PUBLIC_` prefix, so Next will
+    // not inline it into a bundle even though this config can see it.
+    //
+    // The service-role key is not loaded here and must never be: it bypasses every policy
+    // these suites exist to assert, and would make them pass unconditionally.
     env: loadEnv("", projectRoot, ""),
     // These suites read and write the same few rows on one shared database. Run in parallel
     // and the write-refusal tests would race the read assertions against each other's state

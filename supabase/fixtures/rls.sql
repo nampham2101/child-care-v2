@@ -39,10 +39,69 @@
 -- expires completely, and docs/PLAN.md says so. Such a table must not be readable by anon
 -- under any status. Do not extend this fixture to cover one; raise it instead.
 
+-- ---------------------------------------------------------------------------------------
+-- THE TEST ACCOUNT (added by #72)
+-- ---------------------------------------------------------------------------------------
+--
+-- tests/rls/authenticated.test.ts signs in for real, because current_org_id() reads the
+-- session and a session is not something a fixture row can fake.
+--
+-- The account is NOT created here. Creating an auth user from SQL means hand-writing a
+-- password hash into a file in a public repository, which is exactly the shape of mistake
+-- this project avoids elsewhere. It is created once, by hand, in the Supabase dashboard
+-- under Authentication → Users → Add user, with "Auto Confirm User" ticked:
+--
+--     email:    rls-fixture@example.com
+--     password: generated, stored as the GitHub secret SUPABASE_TEST_PASSWORD
+--               and in .env.local for local runs — never committed, never pasted anywhere
+--
+-- The address is deliberately in this file rather than in an environment variable: the
+-- statement below joins on it, and a fixture that silently matched nothing would leave the
+-- suite testing an account that does not exist. The guard makes that a loud failure instead.
+--
+-- WHY THIS ACCOUNT BELONGS TO THE FIXTURE ORGANIZATION AND NOT TO WILLOW GROVE
+--
+-- It is the only member account with a password anyone holds, and a member can write every
+-- content row its organization owns. Put it in willow-grove and the GitHub secret becomes a
+-- credential that can rewrite the live site's tuition table. Here, the worst a leak buys is
+-- the ability to edit two rows whose text reads "FIXTURE — must never be visible".
+--
+-- The guarantee is still proved in both directions: the suite asserts this account writes
+-- its own organization's rows AND is refused on Willow Grove's. A second account inside
+-- willow-grove would only re-prove the same policy from the other side, at the price of that
+-- credential existing.
+
 insert into public.orgs (slug, name)
 values ('rls-fixture', 'RLS Fixture Org — not a real center, never rendered')
 on conflict (slug) do update
   set name = excluded.name;
+
+do $$
+begin
+  if not exists (select 1 from auth.users where email = 'rls-fixture@example.com') then
+    raise exception
+      'The test account rls-fixture@example.com does not exist. Create it in the dashboard '
+      'under Authentication → Users → Add user with Auto Confirm ticked, then re-run this '
+      'file. Without it the profile row below would insert nothing and the authenticated '
+      'suite would fail at sign-in with a message about credentials rather than about setup.';
+  end if;
+end
+$$;
+
+-- The profile row is what makes current_org_id() return anything for that session. Written
+-- here rather than by the application because profiles has no INSERT policy at all — see
+-- the migration that created it — so it is reachable only by the service role, which is what
+-- the dashboard SQL editor runs as.
+insert into public.profiles (id, org_id, role, display_name)
+select u.id, o.id, 'editor', 'RLS Fixture Test Account'
+from auth.users u
+cross join public.orgs o
+where u.email = 'rls-fixture@example.com'
+  and o.slug = 'rls-fixture'
+on conflict (id) do update set
+  org_id = excluded.org_id,
+  role = excluded.role,
+  display_name = excluded.display_name;
 
 -- Deliberately absurd values. If either of these ever reaches a page, it should be
 -- unmistakable at a glance rather than looking like a plausible fourth room.

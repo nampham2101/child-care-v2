@@ -44,13 +44,20 @@ jobs:
       - run: npm run test:unit
 
       # The suites that need the real hosted project — mocking a database behaviour would
-      # only ever prove the mock agrees with the assertions. Two of them:
+      # only ever prove the mock agrees with the assertions. Three of them:
       #
-      #   - Row-level security: drafts are invisible to the anonymous key, and the key cannot
-      #     write to any table. It does NOT assert that another organization's published rows
-      #     are invisible — the anonymous policy is `status = 'published'` and nothing else,
-      #     deliberately, because this key ships in the client bundle and any organization
-      #     scope it carried would be forgeable. docs/PLAN.md records that in full.
+      #   - Row-level security, anonymous: drafts are invisible to the anonymous key, and the
+      #     key cannot write to any table. It does NOT assert that another organization's
+      #     published rows are invisible — the anonymous policy is `status = 'published'` and
+      #     nothing else, deliberately, because this key ships in the client bundle and any
+      #     organization scope it carried would be forgeable. docs/PLAN.md records that in
+      #     full.
+      #   - Row-level security, authenticated (added by #72): a signed-in member reads and
+      #     writes its own organization's rows, drafts included, and is refused on every
+      #     other organization's. This one *can* claim cross-tenant isolation, because the
+      #     authenticated policies resolve the organization from the session rather than from
+      #     anything the caller sends. It signs in for real, which is why the step below
+      #     carries a secret and the two above it do not.
       #   - Message keys: every key the content queries return has copy in every catalogue.
       #     That join used to be checked by the compiler, when the keys were `as const`
       #     literal unions. It cannot be now, and a band with no message renders a blank card
@@ -59,10 +66,18 @@ jobs:
       # Separate from test:unit so the fast gate stays hermetic — an unreachable project
       # should fail here, plainly, rather than making the pure-logic suite look broken.
       # Before the build, because either regression is worth failing on in seconds.
+      #
+      # SUPABASE_TEST_PASSWORD is a repository *secret*, unlike the two variables beside it.
+      # It is the password of a real Supabase account, and the only credential in this
+      # workflow that is not public by design — so it is masked, and it belongs to a member
+      # of the fixture organization rather than of the live center. What it can reach if it
+      # ever leaked is two rows whose text reads "FIXTURE — must never be visible".
+      # supabase/fixtures/rls.sql explains why the account is scoped that way.
       - run: npm run test:db
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_TEST_PASSWORD: ${{ secrets.SUPABASE_TEST_PASSWORD }}
 
       # Production build, not `next dev` — a change that only breaks when prerendered
       # should fail here rather than on the Netlify deploy.
