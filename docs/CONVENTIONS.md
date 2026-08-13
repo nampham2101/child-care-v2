@@ -236,7 +236,9 @@ deliberately left out. This is the audit trail.
 
 ### Self-review checklist
 
-Every PR is self-reviewed against this before merge:
+From `v0.4.0` self-review is the first of two passes rather than the only one — see "Who reviews,
+and why that changed at `v0.4.0`" under Releases. Every PR is self-reviewed against this before it
+is opened for review:
 
 - [ ] Does one thing; unrelated findings are filed as issues, not fixed here
 - [ ] Description explains the change to someone without context
@@ -252,7 +254,10 @@ Every PR is self-reviewed against this before merge:
 - [ ] Staged with explicit paths — never `git add -A`, which sweeps in untracked files
 
 Self-review reliably catches slips — typos, missing error handling, forgotten edge cases. It does
-not catch the author's own design blind spots. Deploy Previews and the release gate cover that.
+not catch the author's own design blind spots; nothing an author does to their own work can. Through
+`v0.3.0` that gap was covered by Deploy Previews and the release gate. From `v0.4.0` it is covered
+by owner review before merge, which is the point of adding it — the checklist above still runs, and
+still runs first.
 
 ---
 
@@ -364,13 +369,35 @@ Notes are generated from merged pull requests and grouped under headings by `.gi
 
 A missing label is not a failure — the PR simply falls into an "Other" group in the generated notes.
 
-### An accepted consequence
+### Who reviews, and why that changed at `v0.4.0`
 
-Because production is gated at the release rather than at PR review, **`main` may contain code that
-has not been reviewed by the project owner**, and changes bundle between releases. That is a
-deliberate trade: owner attention goes on running software rather than on diffs. The consequence to
-accept is that when something breaks after a release, the suspect list is a batch rather than a
-single PR. Deploy Previews are the mitigation — every change is viewable before it merges.
+**From `v0.4.0`, the owner reviews every pull request before it merges.** The release tag is still
+the production gate — that does not change, and nothing reaches production without a published
+release. What changed is that there are now two gates rather than one.
+
+Through `v0.3.0` there was one. Production was gated at the release rather than at PR review, so
+`main` could contain code the owner had not read, and changes bundled between releases. That was a
+deliberate trade — owner attention on running software rather than on diffs — and it was sound for
+what it governed: seven prerendered marketing pages, read-only, where a Deploy Preview showed a
+reviewer exactly what a visitor would get and a missed flaw surfaced as a wrong-looking page.
+
+`v0.4.0` is a different shape of risk, and the mitigation that carried the old model does not reach
+it:
+
+- It **writes to the database.** A mistake is no longer a wrong-looking page; it is wrong data.
+- It introduces **authentication and row-level security against real sessions**, where the failure
+  is invisible on a Deploy Preview — a preview shows what a *permitted* user sees, not what an
+  unauthorized one can reach.
+- It accepts **file uploads**, the first untrusted input this system has ever taken.
+- It introduces the **first dynamic routes** in a project where every route is static today.
+
+Deploy Previews still catch what they always caught. They do not catch any of the four above the way
+they catch a layout change, which is the whole argument: the review model is shaped to the risk, not
+chosen once and inherited.
+
+Whether this survives `v0.4.0` is deliberately undecided — `docs/PLAN.md` carries it as an open
+question for whoever plans `v1.0.0`, because pre-deciding it now would be guessing at a risk profile
+that does not exist yet.
 
 ---
 
