@@ -1,62 +1,71 @@
-/**
- * The admin home — deliberately an empty shell.
- *
- * #73 ends here, and the emptiness is the point: authentication is the thing that is worth
- * reviewing on its own, rather than inside a pull request that also contains forms. The
- * editors that fill this page are #74 (facts), #77 (prose), and #78 (images).
- *
- * It lists what is coming rather than saying "nothing here yet", so the first staff member
- * to sign in learns what the tool will do instead of wondering whether it is broken.
- */
-const COMING = [
-  {
-    title: "The center's facts",
-    body: "Phone, email, licence number, hours, the three rooms, staff, and the rate sheet.",
-    issue: 74,
-  },
-  {
-    title: "Publishing",
-    body: "Edits save as drafts. Publishing rebuilds the site, live in about two minutes.",
-    issue: 75,
-  },
-  {
-    title: "Words on the pages",
-    body: "Room descriptions, staff bios, and every FAQ answer, editable without touching a file.",
-    issue: 77,
-  },
-  {
-    title: "Photos of the spaces",
-    body: "The rooms, the garden, the entrance. No photographs of children or staff.",
-    issue: 78,
-  },
-];
+import Link from "next/link";
 
-export default function AdminHomePage() {
+import { countPendingEdits } from "@/lib/admin/editable";
+import { ADMIN_SECTIONS } from "@/lib/admin/nav";
+
+/**
+ * The editor's front door.
+ *
+ * It leads with the count of unpublished edits rather than with the sections, because until
+ * #75 ships there is no way to publish and therefore no way for a staff member to discover
+ * that state except by being told. `docs/PLAN.md` is emphatic that this interface must never
+ * imply a change is live when it is not; this is the first place that promise is kept.
+ *
+ * `next/link` rather than the locale-aware `Link` from `@/i18n/navigation`: the admin is
+ * outside the locale tree, so a prefixed href here would point at a route that does not exist.
+ */
+export default async function AdminHomePage() {
+  const pending = await countPendingEdits();
+
   return (
     <>
       <h1 className="text-2xl font-semibold text-ink-900">
-        You&rsquo;re signed in
+        What would you like to change?
       </h1>
-      <p className="mt-2 max-w-prose text-ink-700">
-        There is nothing to edit yet. Signing in was built first, on its own, so
-        that the part protecting the site could be checked carefully before any
-        editing was put behind it.
-      </p>
 
-      <h2 className="mt-10 text-sm font-semibold tracking-widest text-ink-500 uppercase">
-        What lands here next
-      </h2>
-      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-        {COMING.map(({ title, body, issue }) => (
-          <li
-            key={issue}
-            className="rounded-2xl border border-border bg-cream-50 p-5"
-          >
-            <p className="font-semibold text-ink-900">{title}</p>
-            <p className="mt-1.5 text-sm text-ink-700">{body}</p>
+      <div className="mt-6 rounded-2xl border border-border bg-cream-50 p-5">
+        {pending === 0 ? (
+          <p className="text-ink-700">
+            Nothing is waiting. Everything here matches what the public site
+            shows.
+          </p>
+        ) : (
+          <>
+            <p className="font-medium text-ink-900">
+              {pending} {pending === 1 ? "change is" : "changes are"} saved but
+              not published.
+            </p>
+            <p className="mt-1.5 text-sm text-ink-700">
+              The public site still shows the old versions. Publishing arrives
+              in the next release — until then edits are held here safely and
+              nothing a parent sees has changed.
+            </p>
+          </>
+        )}
+      </div>
+
+      <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+        {ADMIN_SECTIONS.map(({ href, label, description }) => (
+          <li key={href}>
+            <Link
+              href={href}
+              className="block h-full rounded-2xl border border-border bg-cream-50 p-5 transition-colors hover:border-sage-500 focus-visible:ring-2 focus-visible:ring-sage-700 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-100 focus-visible:outline-none"
+            >
+              <p className="font-semibold text-ink-900">{label}</p>
+              <p className="mt-1.5 text-sm text-ink-700">{description}</p>
+            </Link>
           </li>
         ))}
       </ul>
+
+      <h2 className="mt-12 text-sm font-semibold tracking-widest text-ink-500 uppercase">
+        Not here yet
+      </h2>
+      <p className="mt-3 max-w-prose text-sm text-ink-700">
+        Publishing, so a change goes live (#75). The words on the pages — room
+        descriptions, staff bios, every FAQ answer (#76, #77). Photographs of
+        the rooms and the garden (#78).
+      </p>
     </>
   );
 }

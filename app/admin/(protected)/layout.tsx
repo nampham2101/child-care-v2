@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { SIGN_IN_PATH } from "@/lib/admin-paths";
+import { ADMIN_SECTIONS } from "@/lib/admin/nav";
 import { getSignedInUser } from "@/lib/supabase-server";
 
 /**
@@ -37,9 +39,12 @@ export default async function ProtectedAdminLayout({
             <p className="text-xs font-semibold tracking-widest text-terracotta-500 uppercase">
               Staff
             </p>
-            <p className="text-base font-semibold text-ink-900">
+            <Link
+              href="/admin"
+              className="rounded-sm text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-700 focus-visible:ring-offset-4 focus-visible:ring-offset-cream-50 focus-visible:outline-none"
+            >
               Willow Grove Children&rsquo;s Center
-            </p>
+            </Link>
           </div>
 
           <div className="flex items-center gap-4">
@@ -57,6 +62,27 @@ export default async function ProtectedAdminLayout({
           </div>
         </div>
       </header>
+
+      {/* The section list, so a staff member can move between the four editors without going
+          back to the index each time. Plain links rather than a component with active-state
+          logic — four destinations do not earn a client boundary. */}
+      <nav
+        aria-label="Editor sections"
+        className="border-b border-border bg-cream-50"
+      >
+        <ul className="mx-auto flex w-full max-w-5xl flex-wrap gap-x-5 gap-y-2 px-5 pb-3 text-sm">
+          {ADMIN_SECTIONS.map(({ href, label }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className="rounded-sm font-medium text-ink-700 transition-colors hover:text-sage-700 focus-visible:ring-2 focus-visible:ring-sage-700 focus-visible:ring-offset-4 focus-visible:ring-offset-cream-50 focus-visible:outline-none"
+              >
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-10">
         {children}
