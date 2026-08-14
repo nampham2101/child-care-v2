@@ -35,6 +35,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Database } from "@/lib/database.types";
+import { requireFixtureSetup } from "./fixture-setup";
 
 const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -68,6 +69,7 @@ const TWIN_KEY = "rlsFixtureTwin";
 const UNIQUE_VIOLATION = "23505";
 
 let fixtureOrgId: string;
+let willowGroveOrgId: string;
 
 /** The columns `programs` needs beyond the ones under test. */
 function programRow(status: "draft" | "published", ageLabel: string) {
@@ -101,8 +103,10 @@ beforeAll(async () => {
     );
   }
 
-  const { data } = await visitor.from("orgs").select("id, slug");
-  fixtureOrgId = data!.find((row) => row.slug === "rls-fixture")!.id;
+  ({ fixtureOrgId, willowGroveOrgId } = await requireFixtureSetup(
+    member,
+    visitor,
+  ));
 
   // A previous run that died mid-way would otherwise leave rows that make the first insert
   // below fail on the very constraint this suite is trying to characterise.
@@ -258,11 +262,6 @@ describe("the constraints the migration did not weaken still hold", () => {
   });
 
   test("a member still cannot write another organization's row", async () => {
-    const { data } = await visitor.from("orgs").select("id, slug");
-    const willowGroveOrgId = data!.find(
-      (row) => row.slug === "willow-grove",
-    )!.id;
-
     // The tenancy guarantee, re-checked against the new index shape: a draft twin is still a
     // row the WITH CHECK half of the policy has to approve.
     const { error } = await member.from("programs").insert({

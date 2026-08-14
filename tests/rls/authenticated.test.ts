@@ -35,6 +35,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Database } from "@/lib/database.types";
+import { requireFixtureSetup } from "./fixture-setup";
 
 const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -89,23 +90,13 @@ beforeAll(async () => {
     );
   }
 
-  // Read as the visitor: `orgs` grants authenticated only its own row, so the member cannot
-  // look up the organization it is about to be refused on.
-  const { data, error: orgsError } = await visitor
-    .from("orgs")
-    .select("id, slug");
-  if (orgsError)
-    throw new Error(`Cannot reach the project: ${orgsError.message}`);
-
-  fixtureOrgId = data!.find((row) => row.slug === "rls-fixture")!.id;
-  willowGroveOrgId = data!.find((row) => row.slug === "willow-grove")!.id;
-
-  if (!fixtureOrgId || !willowGroveOrgId) {
-    throw new Error(
-      "Both the fixture organization and willow-grove must exist for this suite to compare " +
-        "them. Apply supabase/fixtures/rls.sql and supabase/seed.sql.",
-    );
-  }
+  // Fails as *setup* rather than as a policy assertion when the profile row is missing —
+  // which is a state this project reaches more easily than it looks, because deleting the
+  // account in the dashboard cascades the profile away. See tests/rls/fixture-setup.ts.
+  ({ fixtureOrgId, willowGroveOrgId } = await requireFixtureSetup(
+    member,
+    visitor,
+  ));
 });
 
 afterAll(async () => {
