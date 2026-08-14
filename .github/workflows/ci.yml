@@ -100,10 +100,19 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       # Playwright's webServer runs `next start`, which serves the prerendered pages built
-      # above and should not touch the database at all. The variables are passed anyway so
-      # that a page which unexpectedly renders on demand fails on its assertion rather than
-      # on a missing-configuration error, which would point at CI instead of at the page.
+      # above. The seven public pages should not touch the database at all; the variables are
+      # passed anyway so that a page which unexpectedly renders on demand fails on its
+      # assertion rather than on a missing-configuration error, which would point at CI
+      # instead of at the page.
+      #
+      # From v0.4.0 the admin routes DO render on demand and DO reach Supabase — they verify
+      # a session on every request. SUPABASE_TEST_PASSWORD is here for the same reason it is
+      # on test:db above: tests/e2e/admin-auth.spec.ts signs in as a real account, because
+      # "can a staff member actually get in and back out" is not answerable against a stub.
+      # That half of the suite skips where the secret is absent (a working copy) and throws
+      # where it must not be (CI) — the file says so at the top.
       - run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_TEST_PASSWORD: ${{ secrets.SUPABASE_TEST_PASSWORD }}
