@@ -22,6 +22,16 @@ import { test, expect } from "@playwright/test";
 const TEST_EMAIL = "rls-fixture@example.com";
 const TEST_PASSWORD = process.env.SUPABASE_TEST_PASSWORD;
 
+/**
+ * The admin home's heading, matched by role and a loose pattern rather than by its exact
+ * text. The page renders a typographic apostrophe (`You’re`), and a literal `"You're"` with
+ * an ASCII quote matches nothing — which is a live trap rather than a nitpick, because the
+ * locked-door cases below assert this is *hidden*. A locator that matches nothing is always
+ * hidden, so the wrong string made those cases pass without testing anything, and they would
+ * have stayed green if admin content had leaked to an unauthenticated visitor.
+ */
+const SIGNED_IN_HEADING = /signed in/i;
+
 if (!TEST_PASSWORD && process.env.CI) {
   throw new Error(
     "SUPABASE_TEST_PASSWORD is not set. In CI it is a repository secret and the signed-in " +
@@ -44,7 +54,9 @@ test.describe("the admin area is locked", () => {
     expect(new URL(page.url()).searchParams.get("next")).toBe("/admin");
 
     // The assertion that matters: no admin content was rendered on the way past.
-    await expect(page.getByText("You're signed in")).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
+    ).toBeHidden();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeHidden();
   });
 
@@ -158,7 +170,9 @@ test.describe("a staff member can get in and out", () => {
 
     // Landed inside, on the destination the `next` parameter carried.
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByText("You're signed in")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
+    ).toBeVisible();
     await expect(page.getByText(TEST_EMAIL)).toBeVisible();
 
     /*
@@ -167,7 +181,9 @@ test.describe("a staff member can get in and out", () => {
      */
     await page.reload({ waitUntil: "load" });
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByText("You're signed in")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/admin\/sign-in/);
@@ -175,7 +191,9 @@ test.describe("a staff member can get in and out", () => {
     // And out means out — going back to the admin does not resurrect the session.
     await page.goto("/admin", { waitUntil: "load" });
     await expect(page).toHaveURL(/\/admin\/sign-in/);
-    await expect(page.getByText("You're signed in")).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
+    ).toBeHidden();
   });
 
   /**
