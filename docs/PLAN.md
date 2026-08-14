@@ -343,6 +343,20 @@ write exactly nothing. The setting is the front door; the missing profile row is
 There is no `faq` or `about` table. With prose staying in the message catalogues — see below — those
 two pages have no facts to move.
 
+### Drafts are twin rows (#74)
+
+The first migration gave every content table one row per thing, which left the editor nowhere to put
+an edit that is not yet live. Each unique constraint is now **two partial unique indexes** — one
+scoped to `status = 'published'`, one to `status = 'draft'` — so a key carries at most one published
+row and at most one draft, and the two coexist.
+
+The reasoning, the three rejected alternatives, the promote algorithm `v0.4.0`'s publish step
+inherits, and the risks knowingly accepted are in
+[`docs/adr/0001-draft-and-published-twin-rows.md`](adr/0001-draft-and-published-twin-rows.md) — the
+first ADR in this repository. The one line worth repeating here, because it is the failure that
+motivated the whole change: flipping a live row to `draft` would have removed it from the anonymous
+read and **failed the next build**, so editing the phone number would have broken the next deploy.
+
 ### What `anon` is, and is not, isolated from
 
 Settled while writing the first migration, because it changes what the row-level security suite can
