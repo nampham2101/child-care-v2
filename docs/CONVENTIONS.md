@@ -16,11 +16,11 @@ files do not end up improvised into place.
 ```
 app/                      Next.js App Router
   [locale]/               Public, locale-prefixed pages
-  admin/                  Staff-only admin area
+  admin/                  Staff-only admin area — NOT locale-prefixed, see below
+    sign-in/              Reachable without a session
+    (protected)/          Everything requiring one, guarded by the group's layout
 lib/                      Shared logic — the single home for anything used twice
   *.test.ts               Vitest, beside the module it covers
-  supabase/               Database client, typed queries
-  content/                Content fetching and mapping
 components/
   ui/                     Primitives (button, input, dialog)
   site/                   Public site components
@@ -40,6 +40,21 @@ tests/
 **Shared logic lives in one place.** If a helper is needed in two places, it moves to `lib/` in the
 same commit that creates the second use. Duplicated helpers are how silent drift bugs happen — a
 copy gets fixed and the original does not.
+
+**`lib/` is flat, and that is a correction to this document.** It planned `lib/supabase/` and
+`lib/content/` subdirectories before either existed. What actually grew is a dozen kebab-case
+modules — `center.ts`, `tuition.ts`, `supabase-server.ts`, `admin-paths.ts` — and at that size a
+subdirectory buys nothing but a longer import path. Grouping is worth revisiting when a single
+prefix has enough files that the directory listing stops being scannable; `v0.4.0` is not there.
+
+**`app/admin/` is deliberately outside `app/[locale]/`.** The staff area is a tool, not a
+publication, so it carries no locale prefix and never runs the locale middleware. `docs/PLAN.md`
+holds the reasoning and the tripwire — briefly: editing translated *content* is a control inside a
+page, and must not be confused with a locale prefix on the URL.
+
+**A new admin page is protected by where its file sits.** Put it under `app/admin/(protected)/` and
+the group's layout has already verified the session. A page placed beside `sign-in/` instead is
+public, which is occasionally what you want and never what you want by accident.
 
 ---
 

@@ -97,6 +97,47 @@ What it buys:
 build minutes. For a brochure site whose copy changes monthly that is a non-issue — but the admin
 must say *"Publishing — live in about two minutes"* rather than implying it was instant.
 
+### How the split is actually enforced (#73)
+
+The paragraph above was a design intention until `v0.4.0`; `/admin` is the first route this project
+has ever served on demand, so it is now a thing the code has to hold rather than describe.
+
+**One middleware, two branches, and they never both run.** `middleware.ts` tests the path: anything
+under `/admin` goes to the Supabase session guard, everything else to the locale middleware. Running
+both — the obvious shape — is wrong twice over. `getUser()` calls the auth server, so it would put a
+network round trip in front of seven pages that are otherwise served from cache, which is exactly
+the thing this section rules out. And `/admin` is not locale-prefixed, so the locale middleware
+would redirect it to `/en/admin`, which does not exist.
+
+**The check that this is still true is `npm run build`'s route table**, where the seven public pages
+are marked `●` (prerendered) and only `/admin`, `/admin/sign-in`, and `/admin/sign-out` are marked
+`ƒ`. An eighth `ƒ` on a public route means the boundary broke, and that is a more reliable signal
+than any assertion about it — so it belongs in the pull request description of anything that
+touches routing.
+
+**Why `/admin` sits outside the locale tree at all.** The locale segment exists so a *parent* can
+read the site in their language. Staff are the people who work at this one center, and the admin is
+a tool rather than a publication, so prefixing it would add `/en/` to every staff URL and imply a
+translated admin that nothing intends to build. *Tripwire:* #77 puts prose editing in the admin, and
+a staff member will need to choose which **content** locale they are editing. That is a control
+inside the page, not a locale prefix on the URL — and with the second and third locales now
+confirmed as coming, the two are easy to conflate and expensive to unpick.
+
+**Three decisions inside the guard, each with a cheaper wrong answer:**
+
+- **`getUser()`, never `getSession()`.** `getSession()` decodes the session cookie without verifying
+  its signature, so it reports what the browser *claims*. It is the faster call and the one most
+  examples reach for, and using it for a gate means the gate is forgeable.
+- **The session lives in cookies written server-side, not in browser storage**, and sign-in is a
+  server action rather than a client-side `supabase-js` call. That keeps the token out of reach of
+  any script on the page and keeps the form working before JavaScript loads — on the one page whose
+  failure locks staff out of the tool.
+- **The guard is checked twice**, once in the middleware and once structurally in
+  `app/admin/(protected)/layout.tsx`. They fail differently: the middleware is a matcher pattern that
+  a later edit can silently stop applying, while the layout protects a new page because of where its
+  file sits. **Neither is the real boundary.** Row-level security is, and it would hold with both of
+  them deleted.
+
 ---
 
 ## Design direction
@@ -518,8 +559,8 @@ human. That is accepted for a release that takes untrusted input for the first t
 | `NETLIFY_AUTH_TOKEN` secret + `NETLIFY_SITE_ID` variable in GitHub Actions | **Done** |
 | Supabase project created, URL and anon key published to GitHub and Netlify | **Done** — project `kdhtodcmxgxfnxrbkkzp`, `us-west-1` (issue #44) |
 | Supabase database password to hand, for the first `supabase db push` | **Needed for issue #47.** A different credential from the anon key; prompted for at the terminal, never committed |
-| Self-service signup turned off in Supabase Auth | **Needed for issue #72 to be green.** Dashboard → Authentication → Sign In / Providers → disable "Allow new users to sign up". Supabase allows it by default, so this is an explicit step |
-| Test account `rls-fixture@example.com` created, and `SUPABASE_TEST_PASSWORD` set as a GitHub **secret** | **Needed for issue #72 to be green.** Dashboard → Authentication → Users → Add user, "Auto Confirm User" ticked. Then re-run `supabase/fixtures/rls.sql`. The authenticated row-level security suite cannot run without it, and fails loudly rather than skipping |
+| Self-service signup turned off in Supabase Auth | **Done** (#72). Dashboard → Authentication → Sign In / Providers → "Allow new users to sign up" disabled. Supabase allows it by default, so this was an explicit step and it is the control that enforces invite-only — the sign-in page having no signup link enforces nothing |
+| Test account `rls-fixture@example.com` created, and `SUPABASE_TEST_PASSWORD` set as a GitHub **secret** | **Done** (#72). The third step is the one that was missed and will be missed again: creating the account is not enough, `supabase/fixtures/rls.sql` must then be re-run to insert its `profiles` row. Without it `current_org_id()` returns `NULL` and the suite fails as a *policy* error rather than as the setup error it is |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |
 
