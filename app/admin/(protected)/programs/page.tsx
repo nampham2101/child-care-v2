@@ -1,0 +1,122 @@
+import type { Metadata } from "next";
+
+import { savePrograms } from "@/app/admin/(protected)/programs/actions";
+import { EditorForm } from "@/components/admin/EditorForm";
+import { Field } from "@/components/admin/Field";
+import { Section } from "@/components/admin/Section";
+import { getEditablePrograms, getEditableRhythm } from "@/lib/admin/editable";
+import { programLabel, rhythmLabel } from "@/lib/admin/labels";
+
+export const metadata: Metadata = { title: "Rooms and the day" };
+
+/**
+ * The three rooms and the shape of a day.
+ *
+ * Ratios and group sizes appear on four pages — the home summary cards, `/programs`, `/about`
+ * and the tuition table — which is why they are edited in one place. A ratio saying 1:4 on one
+ * page and 1:5 on another is worse than publishing no ratio at all.
+ */
+export default async function ProgramsPage() {
+  const [programs, rhythm] = await Promise.all([
+    getEditablePrograms(),
+    getEditableRhythm(),
+  ]);
+
+  return (
+    <>
+      <h1 className="text-2xl font-semibold text-ink-900">Rooms and the day</h1>
+      <p className="mt-2 max-w-prose text-ink-700">
+        The numbers a parent writes down when they are comparing you with the
+        center down the road.
+      </p>
+
+      <div className="mt-8">
+        <EditorForm action={savePrograms}>
+          {programs.map((program) => {
+            const label = programLabel(program.key);
+
+            return (
+              <Section
+                key={program.key}
+                title={label.text}
+                description={
+                  label.missing
+                    ? "This room has no name in the site's copy, so it renders blank on the public pages. That needs a developer."
+                    : undefined
+                }
+                pending={program.hasDraft}
+              >
+                {/* The key travels with the row so the save knows which room this is. It is
+                    never shown and never editable — see lib/admin/labels.ts. */}
+                <input type="hidden" name="program_key" value={program.key} />
+
+                <Field
+                  name={`age_label__${program.key}`}
+                  label="Ages in this room"
+                  hint="For example “6 weeks – 18 months”."
+                  defaultValue={program.ageLabel}
+                />
+                <Field
+                  name={`ratio__${program.key}`}
+                  label="Ratio"
+                  hint="Caregivers to children, written the way it should appear — for example “1:4”."
+                  defaultValue={program.ratio}
+                />
+                <Field
+                  name={`group_size__${program.key}`}
+                  label="Group size"
+                  hint="For example “8 children”."
+                  defaultValue={program.groupSize}
+                />
+                <Field
+                  name={`sort_order__${program.key}`}
+                  label="Order on the page"
+                  hint="Lowest first. Rooms are listed youngest to oldest, because a parent arrives knowing their child's age and nothing else."
+                  type="number"
+                  inputMode="numeric"
+                  defaultValue={program.sortOrder}
+                />
+              </Section>
+            );
+          })}
+
+          <Section
+            title="A day here"
+            description="The times a parent reads to picture their child's morning. Listed in the order they happen."
+            pending={rhythm.some((slot) => slot.hasDraft)}
+          >
+            {rhythm.map((slot) => {
+              const label = rhythmLabel(slot.labelKey);
+
+              return (
+                <div
+                  key={slot.labelKey}
+                  className="grid gap-4 border-b border-border pb-5 last:border-0 last:pb-0 sm:grid-cols-2"
+                >
+                  <input
+                    type="hidden"
+                    name="rhythm_key"
+                    value={slot.labelKey}
+                  />
+                  <Field
+                    name={`time__${slot.labelKey}`}
+                    label={label.text}
+                    hint="12-hour, no am or pm — the whole list runs through one day."
+                    defaultValue={slot.time}
+                  />
+                  <Field
+                    name={`rhythm_sort_order__${slot.labelKey}`}
+                    label="Order in the day"
+                    type="number"
+                    inputMode="numeric"
+                    defaultValue={slot.sortOrder}
+                  />
+                </div>
+              );
+            })}
+          </Section>
+        </EditorForm>
+      </div>
+    </>
+  );
+}
