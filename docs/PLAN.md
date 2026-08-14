@@ -357,6 +357,35 @@ first ADR in this repository. The one line worth repeating here, because it is t
 motivated the whole change: flipping a live row to `draft` would have removed it from the anonymous
 read and **failed the next build**, so editing the phone number would have broken the next deploy.
 
+### What the editor decided about keys (#74)
+
+**`key` and `label_key` are not editable, and are never shown.** #74 offered two ways to handle the
+integrity risk they carry — prevent the edit, or validate it against the message catalogue at save
+time — and the editor takes the first.
+
+Safety is only half the argument. Those columns join a database row to a namespace in
+`messages/en.json`, so a staff member renaming `infants` to `babies` would get a blank card on the
+public site and the key-coverage test would not notice until the next build. But the simpler reason
+is #74's own acceptance bar: *a staff member can complete the whole edit without being told a
+database column name.* A `key` **is** a column name, and validating one means showing it.
+
+**The consequence, stated because it is a real limit rather than an oversight: the editor changes
+existing content and cannot create it.** Adding a room or a staff member needs a new key *and* its
+copy in the catalogue, and the catalogue is not editable until #76 moves prose into the database.
+*Tripwire:* when #76 lands, revisit this — at that point a staff member could genuinely add a room,
+and the question becomes how a key is generated rather than whether it is typed.
+
+Two smaller decisions worth not re-deriving:
+
+- **The phone number and email address are one field each, not two.** `site_settings` stores
+  `phone_display` beside `phone_href` precisely so the pretty format and the dial target cannot
+  disagree — and the surest way to make them disagree is to ask a person to keep both in sync. The
+  `tel:` and `mailto:` are derived from what was typed.
+- **Only rows that actually changed are written.** The forms post every row, so a naive save would
+  draft all three rooms because one ratio was corrected. An "unpublished edit" badge on a row nobody
+  touched is a lie, and #75 turns this same set into the publish queue — where spurious entries
+  would have a staff member approving changes they never made.
+
 ### What `anon` is, and is not, isolated from
 
 Settled while writing the first migration, because it changes what the row-level security suite can

@@ -41,11 +41,16 @@ tests/
 same commit that creates the second use. Duplicated helpers are how silent drift bugs happen — a
 copy gets fixed and the original does not.
 
-**`lib/` is flat, and that is a correction to this document.** It planned `lib/supabase/` and
-`lib/content/` subdirectories before either existed. What actually grew is a dozen kebab-case
+**`lib/` is flat at the top level, with one subdirectory.** This document originally planned
+`lib/supabase/` and `lib/content/` before either existed; what actually grew is a dozen kebab-case
 modules — `center.ts`, `tuition.ts`, `supabase-server.ts`, `admin-paths.ts` — and at that size a
-subdirectory buys nothing but a longer import path. Grouping is worth revisiting when a single
-prefix has enough files that the directory listing stops being scannable; `v0.4.0` is not there.
+subdirectory buys nothing but a longer import path.
+
+The tripwire written here was "when a single prefix has enough files that the directory listing
+stops being scannable", and it arrived one pull request later than expected: #74 added six modules
+that would all have been `admin-*`, so they live in **`lib/admin/`** instead. That is the rule
+firing, not an exception to it. The next prefix to reach that size gets the same treatment; nothing
+moves before it does.
 
 **`app/admin/` is deliberately outside `app/[locale]/`.** The staff area is a tool, not a
 publication, so it carries no locale prefix and never runs the locale middleware. `docs/PLAN.md`
