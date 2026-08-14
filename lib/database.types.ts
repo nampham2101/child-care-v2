@@ -223,7 +223,7 @@ export type Database = {
           {
             foreignKeyName: "site_settings_org_id_fkey"
             columns: ["org_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
@@ -317,7 +317,7 @@ export type Database = {
           {
             foreignKeyName: "tuition_fees_org_id_fkey"
             columns: ["org_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "orgs"
             referencedColumns: ["id"]
           },
