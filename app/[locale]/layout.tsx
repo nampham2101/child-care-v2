@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import {
@@ -11,12 +10,8 @@ import { SiteNav } from "@/components/site/SiteNav";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getCenter } from "@/lib/center";
+import { geistSans } from "@/lib/fonts";
 import "../globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   // `default` is the full home-page title; `template` lets a sub-page set just its own
