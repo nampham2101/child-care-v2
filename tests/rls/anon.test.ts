@@ -121,6 +121,28 @@ describe("drafts are invisible to an anonymous client", () => {
   });
 });
 
+describe("profiles are invisible to an anonymous client", () => {
+  // Added by #72. Deliberately its own block rather than an entry in CONTENT_TABLES above:
+  // every assertion in that list assumes a `status` column and a row a visitor may read, and
+  // profiles has neither. It is not content. It is the list of who works at the center and
+  // which auth account is theirs, and the anonymous key ships in the client bundle.
+  //
+  // The refusal is a privilege error rather than an empty result, because the migration
+  // grants anon nothing at all on this table — there is no anonymous policy to evaluate.
+
+  test("select is refused", async () => {
+    const { error } = await anon.from("profiles").select("display_name");
+
+    expect(error?.code).toBe(INSUFFICIENT_PRIVILEGE);
+  });
+
+  test("insert is refused", async () => {
+    const { error } = await anon.from("profiles").insert({} as never);
+
+    expect(error?.code).toBe(INSUFFICIENT_PRIVILEGE);
+  });
+});
+
 describe("an anonymous client cannot write", () => {
   test.each(CONTENT_TABLES)("insert is refused on %s", async (table) => {
     // A deliberately empty payload: the write is refused on privilege before the row is ever
