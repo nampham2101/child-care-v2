@@ -23,14 +23,25 @@ const TEST_EMAIL = "rls-fixture@example.com";
 const TEST_PASSWORD = process.env.SUPABASE_TEST_PASSWORD;
 
 /**
- * The admin home's heading, matched by role and a loose pattern rather than by its exact
- * text. The page renders a typographic apostrophe (`You’re`), and a literal `"You're"` with
- * an ASCII quote matches nothing — which is a live trap rather than a nitpick, because the
- * locked-door cases below assert this is *hidden*. A locator that matches nothing is always
- * hidden, so the wrong string made those cases pass without testing anything, and they would
- * have stayed green if admin content had leaked to an unauthenticated visitor.
+ * The marker for "admin content rendered": the sign-out control.
+ *
+ * **It is deliberately a thing in the protected *layout*, not on a page.** This started out as
+ * the admin home's heading and broke the moment #74 replaced that page — which is the failure
+ * mode to design against, because the locked-door cases below assert this marker is *hidden*
+ * and a locator matching nothing is always hidden. A page-level marker would therefore go
+ * quietly vacuous every time a page is redesigned, and those cases would keep passing while
+ * testing nothing.
+ *
+ * Two properties make the layout the right place. It cannot render for an unauthenticated
+ * request, because the layout is what turns one away. And it survives #75, #77 and #78
+ * rewriting everything inside it.
+ *
+ * The same locator is asserted visible when signed in and hidden when not, so neither half can
+ * go vacuous without the other failing — which is what caught this.
  */
-const SIGNED_IN_HEADING = /signed in/i;
+function adminShellMarker(page: import("@playwright/test").Page) {
+  return page.getByRole("button", { name: "Sign out" });
+}
 
 if (!TEST_PASSWORD && process.env.CI) {
   throw new Error(
@@ -54,10 +65,8 @@ test.describe("the admin area is locked", () => {
     expect(new URL(page.url()).searchParams.get("next")).toBe("/admin");
 
     // The assertion that matters: no admin content was rendered on the way past.
-    await expect(
-      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
-    ).toBeHidden();
-    await expect(page.getByRole("button", { name: "Sign out" })).toBeHidden();
+    await expect(adminShellMarker(page)).toBeHidden();
+    await expect(page.getByText(TEST_EMAIL)).toBeHidden();
   });
 
   /**
@@ -170,9 +179,7 @@ test.describe("a staff member can get in and out", () => {
 
     // Landed inside, on the destination the `next` parameter carried.
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(
-      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
-    ).toBeVisible();
+    await expect(adminShellMarker(page)).toBeVisible();
     await expect(page.getByText(TEST_EMAIL)).toBeVisible();
 
     /*
@@ -181,9 +188,7 @@ test.describe("a staff member can get in and out", () => {
      */
     await page.reload({ waitUntil: "load" });
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(
-      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
-    ).toBeVisible();
+    await expect(adminShellMarker(page)).toBeVisible();
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/admin\/sign-in/);
@@ -191,9 +196,7 @@ test.describe("a staff member can get in and out", () => {
     // And out means out — going back to the admin does not resurrect the session.
     await page.goto("/admin", { waitUntil: "load" });
     await expect(page).toHaveURL(/\/admin\/sign-in/);
-    await expect(
-      page.getByRole("heading", { name: SIGNED_IN_HEADING }),
-    ).toBeHidden();
+    await expect(adminShellMarker(page)).toBeHidden();
   });
 
   /**
