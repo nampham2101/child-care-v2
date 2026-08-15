@@ -1,0 +1,105 @@
+name: Publish content
+
+# Rebuilds production from the CURRENTLY RELEASED code with whatever content is now published
+# in the database. This is what the admin's Publish button fires.
+#
+# ---------------------------------------------------------------------------------------
+# WHY THIS EXISTS AT ALL, RATHER THAN A NETLIFY BUILD HOOK
+# ---------------------------------------------------------------------------------------
+#
+# Issue #75 assumed a Netlify build hook. A build hook builds a git branch, and neither branch
+# in this project can carry a content publish:
+#
+#   * `release-prod` is Netlify's production branch and never receives commits, so a hook
+#     pointed at it has nothing to build.
+#   * `main` would produce a branch deploy, not production — the content would rebuild and
+#     never go live.
+#
+# Production has exactly one path: `netlify deploy --build --prod` from a checkout of the
+# released tag. So a content publish reuses that path instead of adding a second one, and the
+# rule that code only reaches production through a release survives intact. The owner decided
+# this on #75; docs/RUNBOOK.md carries it.
+#
+# ---------------------------------------------------------------------------------------
+# THE TAG, NOT MAIN
+# ---------------------------------------------------------------------------------------
+#
+# The job is dispatched against `main` because that is where this file lives, and then checks
+# out the newest release tag to build. Dispatching against the tag itself would fail: the file
+# does not exist on tags cut before it was added, and would be a stale copy on later ones.
+#
+# The consequence to hold on to: **a content publish can never ship unreleased code.** If that
+# ever changes, the second of the two production gates is gone.
+
+on:
+  workflow_dispatch:
+
+# The same group as release.yml, deliberately. A content publish and a release both end in
+# `--prod` against one site, and two of those racing would have the later build's output
+# published under the earlier one's pointer. Never cancel one in flight — a half-finished
+# production deploy is worse than a queued one.
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Rebuild production from the released tag
+    runs-on: ubuntu-latest
+    steps:
+      # Full history and tags, so the release lookup below can see them.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Find the current release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh release view --json tagName --jq .tagName)
+          if [ -z "$tag" ]; then
+            echo "::error::No published release. Content cannot be published to production " \
+                 "before the code it renders has been released at least once."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Rebuilding production from $tag"
+
+      # Swap to the released code. Everything after this point builds the tag, not main.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # No CI gate here, and that is deliberate rather than an omission. This exact commit was
+      # gated when it was released, and the only thing that has changed since is database
+      # content that staff cannot make structurally invalid — keys are not editable (#74), so
+      # the message-catalogue join cannot break from this direction. The build below is still a
+      # real gate on the content: `lib/content.ts` raises on a missing published row and
+      # `lib/tuition.ts` raises on an incomplete rate sheet, so a publish that would render a
+      # broken page fails here and production is left untouched.
+      #
+      # `--build` runs @netlify/plugin-nextjs from netlify.toml, which is also what runs
+      # `npm run build` and therefore `scripts/clear-fetch-cache.mjs`. That cache clear is the
+      # whole reason #67 exists: a rebuild against a warm fetch cache renders the PREVIOUS
+      # content and reports success, which is exactly the silent failure this feature would
+      # otherwise produce on every publish.
+      - name: Deploy to Netlify production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          npx --yes netlify-cli@26.2.0 deploy --build --prod \
+            --message "Content publish from ${{ steps.release.outputs.tag }}"
