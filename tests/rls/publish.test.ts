@@ -1,0 +1,238 @@
+/**
+ * `public.publish_org_drafts()` — what it promotes, what it refuses, and the one case that
+ * fails silently.
+ *
+ * ## The assertion that earns this file
+ *
+ * `docs/adr/0001-draft-and-published-twin-rows.md` records two promote cases. Case 1 (a draft
+ * with a published twin) is loud when wrong — the wrong value appears. **Case 2 is not.** A
+ * draft with no published twin must be flipped to `published` in place, never replaced by a
+ * copy, because its id is already referenced by any draft `tuition_rates` row and that foreign
+ * key cascades on delete. Replace instead of flip and the rate sheet loses cells: no error, no
+ * failed build, just a price table with a hole in it that nobody looks for.
+ *
+ * So the case-2 test below creates a rate against a twin-less draft program and asserts the
+ * rate is still there afterwards. That single assertion is the reason this suite exists.
+ *
+ * ## Why a real session, again
+ *
+ * The function is `security invoker`, so row-level security decides what it may touch. Running
+ * it as the service role would bypass exactly the thing under test and pass unconditionally.
+ */
+import { createClient } from "@supabase/supabase-js";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+
+import type { Database } from "@/lib/database.types";
+import { requireFixtureSetup } from "./fixture-setup";
+
+const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const TEST_PASSWORD = process.env.SUPABASE_TEST_PASSWORD;
+const TEST_EMAIL = "rls-fixture@example.com";
+
+if (!PROJECT_URL || !ANON_KEY || !TEST_PASSWORD) {
+  throw new Error(
+    "The publish suite needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and " +
+      "SUPABASE_TEST_PASSWORD, for the same reasons authenticated.test.ts does.",
+  );
+}
+
+const member = createClient<Database>(PROJECT_URL, ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+const visitor = createClient<Database>(PROJECT_URL, ANON_KEY);
+
+/** Keys owned by this suite alone, so a failure cannot leave another suite red. */
+const TWIN_KEY = "rlsPublishTwin";
+const NEW_KEY = "rlsPublishNew";
+const SCHEDULE_KEY = "rlsPublishSchedule";
+
+let fixtureOrgId: string;
+
+function program(
+  key: string,
+  status: "draft" | "published",
+  ratio: string,
+  sortOrder = 970,
+) {
+  return {
+    org_id: fixtureOrgId,
+    key,
+    age_label: "FIXTURE publish probe",
+    ratio,
+    group_size: "0 children",
+    sort_order: sortOrder,
+    status,
+  };
+}
+
+async function cleanUp() {
+  // Rates first: they reference the programs and schedules below, and deleting a parent would
+  // cascade rather than fail — which is the very behaviour this suite is characterising.
+  const { data: schedules } = await member
+    .from("tuition_schedules")
+    .select("id")
+    .eq("key", SCHEDULE_KEY);
+  for (const schedule of schedules ?? []) {
+    await member.from("tuition_rates").delete().eq("schedule_id", schedule.id);
+  }
+  await member.from("tuition_schedules").delete().eq("key", SCHEDULE_KEY);
+  await member.from("programs").delete().in("key", [TWIN_KEY, NEW_KEY]);
+}
+
+beforeAll(async () => {
+  const { error } = await member.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  });
+  if (error)
+    throw new Error(`Could not sign in as ${TEST_EMAIL}: ${error.message}`);
+
+  ({ fixtureOrgId } = await requireFixtureSetup(member, visitor));
+  await cleanUp();
+});
+
+afterEach(cleanUp);
+
+afterAll(async () => {
+  await cleanUp();
+  await member.auth.signOut();
+});
+
+describe("promoting a draft that has a published twin", () => {
+  test("copies the draft onto the published row and removes the draft", async () => {
+    await member.from("programs").insert(program(TWIN_KEY, "published", "OLD"));
+    await member.from("programs").insert(program(TWIN_KEY, "draft", "NEW"));
+
+    const { data: promoted, error } = await member.rpc("publish_org_drafts");
+    expect(error).toBeNull();
+    expect(promoted).toBeGreaterThanOrEqual(1);
+
+    const { data: after } = await member
+      .from("programs")
+      .select("ratio, status")
+      .eq("key", TWIN_KEY);
+
+    // One row, published, carrying the draft's value.
+    expect(after).toEqual([{ ratio: "NEW", status: "published" }]);
+  });
+
+  test("the promoted value is what a signed-out visitor now reads", async () => {
+    await member.from("programs").insert(program(TWIN_KEY, "published", "OLD"));
+    await member.from("programs").insert(program(TWIN_KEY, "draft", "NEW"));
+    await member.rpc("publish_org_drafts");
+
+    // The whole point of publishing: the anonymous read changes. Checked with a signed-out
+    // client, because the member's own view is draft-preferring and would look the same either
+    // way.
+    const { data } = await visitor
+      .from("programs")
+      .select("ratio")
+      .eq("key", TWIN_KEY);
+
+    expect(data).toEqual([{ ratio: "NEW" }]);
+  });
+});
+
+describe("promoting a draft with no published twin", () => {
+  /**
+   * The silent one. If this ever fails by returning zero rates rather than one, the promote
+   * algorithm has started replacing rows instead of flipping them, and the production symptom
+   * is a tuition table with missing cells and no error anywhere.
+   */
+  test("flips the row in place, so rows referencing it survive", async () => {
+    const { data: inserted } = await member
+      .from("programs")
+      .insert(program(NEW_KEY, "draft", "1:1", 971))
+      .select("id")
+      .single();
+    const programId = inserted!.id;
+
+    const { data: schedule } = await member
+      .from("tuition_schedules")
+      .insert({
+        org_id: fixtureOrgId,
+        key: SCHEDULE_KEY,
+        sort_order: 972,
+        status: "draft",
+      })
+      .select("id")
+      .single();
+
+    await member.from("tuition_rates").insert({
+      org_id: fixtureOrgId,
+      schedule_id: schedule!.id,
+      program_id: programId,
+      per_month: 1234,
+      status: "draft",
+    });
+
+    const { error } = await member.rpc("publish_org_drafts");
+    expect(error).toBeNull();
+
+    // The program kept its id — that is what "flipped in place" means, and what the rate's
+    // foreign key depends on.
+    const { data: afterProgram } = await member
+      .from("programs")
+      .select("id, status")
+      .eq("key", NEW_KEY);
+    expect(afterProgram).toEqual([{ id: programId, status: "published" }]);
+
+    // And the rate is still there, published, with its value intact.
+    const { data: afterRate } = await member
+      .from("tuition_rates")
+      .select("per_month, status")
+      .eq("program_id", programId);
+    expect(afterRate).toEqual([{ per_month: 1234, status: "published" }]);
+  });
+});
+
+describe("what publishing refuses and reports", () => {
+  test("publishing with nothing pending promotes nothing", async () => {
+    // The property #75 needs for "publishing twice in quick succession does not produce two
+    // competing builds": the second call has nothing to do, so the application starts no
+    // build. No lock, no queue — it falls out of promoting before rebuilding.
+    await member.from("programs").insert(program(TWIN_KEY, "published", "OLD"));
+    await member.from("programs").insert(program(TWIN_KEY, "draft", "NEW"));
+
+    const first = await member.rpc("publish_org_drafts");
+    expect(first.data).toBeGreaterThanOrEqual(1);
+
+    const second = await member.rpc("publish_org_drafts");
+    expect(second.error).toBeNull();
+    expect(second.data).toBe(0);
+  });
+
+  test("an anonymous caller cannot publish at all", async () => {
+    // Role-scoped: the grant is to `authenticated` only, so this is refused at the door rather
+    // than by the policies inside the function.
+    const { error } = await visitor.rpc("publish_org_drafts");
+
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501");
+  });
+
+  test("a member cannot publish another organization's drafts", async () => {
+    /*
+     * The tenancy guarantee for the one function that writes across every content table at
+     * once. Willow Grove's published rows must be untouched by the fixture member publishing,
+     * even though this call promotes "everything pending".
+     */
+    const before = await visitor
+      .from("programs")
+      .select("key, ratio")
+      .eq("key", "infants")
+      .single();
+
+    await member.from("programs").insert(program(TWIN_KEY, "draft", "NEW"));
+    await member.rpc("publish_org_drafts");
+
+    const after = await visitor
+      .from("programs")
+      .select("key, ratio")
+      .eq("key", "infants")
+      .single();
+
+    expect(after.data).toEqual(before.data);
+  });
+});
