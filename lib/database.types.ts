@@ -422,6 +422,7 @@ export type Database = {
     }
     Functions: {
       current_org_id: { Args: never; Returns: string }
+      publish_org_drafts: { Args: never; Returns: number }
     }
     Enums: {
       content_status: "draft" | "published"
