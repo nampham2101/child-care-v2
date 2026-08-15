@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { test, expect } from "@playwright/test";
 
+import { formAlert, formStatus } from "./announcer";
+
 /**
  * The editor, driven the way a staff member drives it: sign in, change a number, save, and
  * check that the public site did not move.
@@ -185,8 +187,8 @@ test.describe("the facts editor", () => {
      * The message is the assertion, not just that a save happened. #74 and docs/PLAN.md both
      * require the interface never to imply an edit is live when it is not.
      */
-    await expect(page.getByRole("status")).toContainText("saved as a draft");
-    await expect(page.getByRole("status")).toContainText(
+    await expect(formStatus(page)).toContainText("saved as a draft");
+    await expect(formStatus(page)).toContainText(
       "public site still shows the old version",
     );
   });
@@ -239,7 +241,7 @@ test.describe("the facts editor", () => {
     await page.getByRole("textbox", { name: "Ratio" }).last().fill("");
     await page.getByRole("button", { name: "Save draft" }).click();
 
-    const alert = page.getByRole("alert").first();
+    const alert = formAlert(page);
     await expect(alert).toBeVisible();
 
     /*
@@ -277,7 +279,7 @@ test.describe("the facts editor", () => {
     await page.goto("/admin/programs", { waitUntil: "load" });
     await page.getByRole("textbox", { name: "Ratio" }).last().fill("1:3");
     await page.getByRole("button", { name: "Save draft" }).click();
-    await expect(page.getByRole("status")).toContainText("saved as a draft");
+    await expect(formStatus(page)).toContainText("saved as a draft");
 
     await page.goto("/admin", { waitUntil: "load" });
 
@@ -287,7 +289,7 @@ test.describe("the facts editor", () => {
     await expect(publish).toBeEnabled();
     await publish.click();
 
-    const result = page.getByRole("alert");
+    const result = formAlert(page);
     await expect(result).toBeVisible();
     // Published — so nothing was lost, and the message must not suggest otherwise.
     await expect(result).toContainText("published");
