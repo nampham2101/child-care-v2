@@ -74,9 +74,14 @@ export async function saveSpacePhoto(
    * in as a field error on the file input, so the message appears under the control it is about
    * instead of as a page-level banner.
    */
+  let bytes: Uint8Array | null = null;
   let checked: ReturnType<typeof checkUpload> | null = null;
   if (hasFile) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    // Read ONCE, and kept. A File from a server action's FormData is not reliably re-readable —
+    // a second `arrayBuffer()` can hand back nothing, and the upload then stores an empty
+    // object that the checks above already declared valid. Found in CI, which is the only place
+    // this path runs.
+    bytes = new Uint8Array(await file.arrayBuffer());
     checked = checkUpload(bytes, file.type);
     if (!checked.ok) reader.reject(`photo__${key}`, checked.message);
   }
@@ -102,8 +107,8 @@ export async function saveSpacePhoto(
     }
 
     // Narrowed rather than re-checked: `finish` above already refused every rejection, so
-    // reaching here means the bytes passed. Re-reading the file would parse it twice.
-    if (!checked?.ok) {
+    // reaching here means the bytes passed and were kept.
+    if (!checked?.ok || !bytes) {
       return failed("The photograph could not be read. Choose it again.");
     }
     const check = checked;
@@ -126,7 +131,7 @@ export async function saveSpacePhoto(
 
     const { error: uploadError } = await supabase.storage
       .from("spaces")
-      .upload(storagePath, await file.arrayBuffer(), {
+      .upload(storagePath, bytes, {
         contentType: check.image.type,
         // Never overwrite. Paths carry a timestamp, so a collision means two uploads in the
         // same millisecond — and silently replacing bytes the published row points at is the

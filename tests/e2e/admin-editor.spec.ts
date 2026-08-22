@@ -619,10 +619,18 @@ test.describe("photographs of the spaces", () => {
       .first()
       .click();
 
+    /*
+     * Matched against whichever message the form rendered — success OR failure — rather than
+     * against `formStatus` alone. If the upload breaks, this fails printing the actual sentence
+     * the admin showed; asserting only on the success locator fails with "element(s) not
+     * found", which says nothing about why. That cost a CI round trip on this very test.
+     */
+    const message = page.locator("form [role='status'], form [role='alert']");
+
     // Saved as a draft, and the message says the site has not moved — the promise every other
     // editor page makes, kept here too.
-    await expect(formStatus(page)).toContainText(/draft/i);
-    await expect(formStatus(page)).toContainText(/still shows/i);
+    await expect(message).toContainText(/draft/i);
+    await expect(message).toContainText(/still shows/i);
 
     await page.reload({ waitUntil: "load" });
     await expect(page.getByText("Unpublished edit").first()).toBeVisible();
