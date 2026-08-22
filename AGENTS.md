@@ -24,6 +24,13 @@ publish triggering a rebuild. Two things follow from that split, and both bite t
 - **A `{placeholder}` is load-bearing.** Nineteen strings interpolate a value at render time, and
   next-intl throws on a message missing one — which now fails the build. `FieldReader.prose` is what
   stops a staff member deleting one; do not weaken it.
+- **Photographs of the spaces exist** (#78). A `spaces` bucket, a `media` table, uploads at
+  `/admin/photos`, rendered on `/programs`. **Never photographs of people** — that decision is what
+  keeps consent out of this project entirely, and it is the one rule here with no technical
+  enforcement, so it is enforced in review.
+- **Uploads are the only untrusted input.** `lib/admin/image.ts` reads the actual bytes; a
+  content-type header is a claim. Storage paths start with the organization id because the storage
+  policies compare that segment — changing the path shape is changing a security boundary.
 
 Merged is not shipped — only a published release reaches production.
 

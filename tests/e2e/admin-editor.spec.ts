@@ -26,6 +26,25 @@ import { formAlert, formStatus } from "./announcer";
  * make that a three-row scan and fail a suite that has nothing to do with the editor. So the
  * twin created here is deleted afterwards, through the same member session that made it.
  */
+/**
+ * **Every test in this file runs in order, on one worker.**
+ *
+ * `playwright.config.ts` sets `fullyParallel: true`, which parallelises across describe blocks
+ * as well as across files. Every block here mutates the *same* fixture rows and each one calls
+ * `restoreFixtureState` in its own `beforeAll` and `afterAll` — so run concurrently they reset
+ * the database underneath each other, and the symptom is a test failing on a value some other
+ * block had just restored.
+ *
+ * This was latent while there were two blocks and surfaced when #78 added a third: the facts
+ * editor started failing on a signed-out page, nowhere near the code that changed. Configuring
+ * it at file scope rather than per describe is what makes it stay fixed when a fourth is added.
+ *
+ * The cost is real — this file is the slowest in the suite and it no longer shares out — and it
+ * is the price of one shared database. Per-test isolation would need a scratch organization per
+ * worker, which is a bigger change than #78 should carry.
+ */
+test.describe.configure({ mode: "serial" });
+
 const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const TEST_PASSWORD = process.env.SUPABASE_TEST_PASSWORD;
@@ -121,6 +140,23 @@ async function restoreFixtureState() {
     .update({ value: ORIGINAL_ANSWER, status: "published" })
     .eq("key", PROSE_KEY);
 
+  /*
+   * Photographs (#78). The suite uploads real objects into the bucket, so both halves are
+   * cleared: the media rows, and the bytes they point at. Storage is not covered by
+   * publish_org_drafts or by any other restore, so an object left behind here would accumulate
+   * silently on every CI run.
+   */
+  const { data: strayMedia } = await member
+    .from("media")
+    .select("storage_path");
+
+  if (strayMedia && strayMedia.length > 0) {
+    await member.storage
+      .from("spaces")
+      .remove(strayMedia.map((row) => row.storage_path));
+  }
+  await member.from("media").delete().neq("key", "");
+
   await member.auth.signOut();
 }
 
@@ -138,12 +174,6 @@ test.describe("the facts editor", () => {
     "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
   );
 
-  /*
-   * Serial: these tests share two database rows, and running them in parallel would have one
-   * asserting a value another is midway through changing.
-   */
-  test.describe.configure({ mode: "serial" });
-
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
@@ -158,6 +188,7 @@ test.describe("the facts editor", () => {
       "Staff",
       "Tuition",
       "The words",
+      "Photographs",
     ]) {
       await expect(
         page.getByRole("link", { name: section, exact: true }).first(),
@@ -352,8 +383,6 @@ test.describe("the copy editor", () => {
     "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
   );
 
-  test.describe.configure({ mode: "serial" });
-
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
@@ -482,5 +511,150 @@ test.describe("the copy editor", () => {
     });
 
     expect(response?.status()).toBe(404);
+  });
+});
+
+/**
+ * Photographs of the spaces (#78).
+ *
+ * The first untrusted input this system accepts, so the case that matters most is the refusal:
+ * `lib/admin/image.test.ts` proves the byte-sniffing in isolation, and this proves the upload
+ * form is actually wired to it rather than trusting the browser's content type.
+ *
+ * Files are built in memory rather than committed as fixtures. A real photograph in the
+ * repository would be a binary blob nobody can review in a diff, and what is under test is the
+ * boundary — eight bytes of PNG signature exercise it exactly as a 4 MB photo would.
+ */
+test.describe("photographs of the spaces", () => {
+  test.skip(
+    !TEST_PASSWORD,
+    "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
+  );
+
+  test.beforeAll(restoreFixtureState);
+  test.afterAll(restoreFixtureState);
+
+  /**
+   * A PNG signature, padded to a plausible file length.
+   *
+   * The padding is required, not cosmetic: `sniffImage` refuses anything under 12 bytes,
+   * because WebP's format marker ends at byte 12 and a file too short to identify is not one to
+   * guess at. A bare 8-byte signature is therefore correctly rejected — which cost a CI round
+   * trip here, on a test whose own fixture was less realistic than the rule it was exercising.
+   */
+  const PNG_BYTES = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(56),
+  ]);
+
+  test("each room offers somewhere to put a picture, and says none is there yet", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await expect(page.getByText(/No photograph yet/).first()).toBeVisible();
+
+    // The rule that keeps this feature free of any consent question belongs on the screen
+    // where someone would otherwise break it, not only in docs/PLAN.md.
+    await expect(
+      page.getByText(/never of children or staff/i).first(),
+    ).toBeVisible();
+  });
+
+  /**
+   * A renamed file, which is the case #78 is written around: *a content-type header is a claim,
+   * not a fact.* The browser will label this `image/png` because of its name; the bytes are a
+   * PDF, and the server has to notice.
+   */
+  test("a file that only claims to be an image is refused", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page
+      .getByLabel(/Choose a photograph|Replace the photograph/)
+      .first()
+      .setInputFiles({
+        name: "room.png",
+        mimeType: "image/png",
+        buffer: Buffer.from("%PDF-1.7 this is a document, not a room"),
+      });
+
+    // Filled in, so what this test proves is the byte check rather than the empty-description
+    // rule. Both are reported together now, but a blank description here would leave it
+    // ambiguous which rule actually fired.
+    await page
+      .getByLabel("Description of the photograph")
+      .first()
+      .fill("FIXTURE room, described");
+
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    // Under the file input, not as a page banner — the message is about that control.
+    await expect(
+      page.getByText(/not a JPEG, PNG or WebP/i).first(),
+    ).toBeVisible();
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
+  });
+
+  test("a real image uploads, and stays out of the public site until publish", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page
+      .getByLabel(/Choose a photograph|Replace the photograph/)
+      .first()
+      .setInputFiles({
+        name: "room.png",
+        mimeType: "image/png",
+        buffer: PNG_BYTES,
+      });
+
+    await page
+      .getByLabel("Description of the photograph")
+      .first()
+      .fill("FIXTURE room, uploaded by the suite");
+
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    /*
+     * Matched against whichever message the form rendered — success OR failure — rather than
+     * against `formStatus` alone. If the upload breaks, this fails printing the actual sentence
+     * the admin showed; asserting only on the success locator fails with "element(s) not
+     * found", which says nothing about why. That cost a CI round trip on this very test.
+     */
+    const message = page.locator("form [role='status'], form [role='alert']");
+
+    // Saved as a draft, and the message says the site has not moved — the promise every other
+    // editor page makes, kept here too.
+    await expect(message).toContainText(/draft/i);
+    await expect(message).toContainText(/still shows/i);
+
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByText("Unpublished edit").first()).toBeVisible();
+  });
+
+  /** An image needs a description, or it is invisible to a parent using a screen reader. */
+  test("a photograph with no description is refused", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page.getByLabel("Description of the photograph").first().fill("   ");
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
   });
 });
