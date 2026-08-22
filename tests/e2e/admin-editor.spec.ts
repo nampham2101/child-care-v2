@@ -534,9 +534,17 @@ test.describe("photographs of the spaces", () => {
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
-  /** Eight bytes that really are a PNG signature. */
-  const PNG_BYTES = Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  /**
+   * A PNG signature, padded to a plausible file length.
+   *
+   * The padding is required, not cosmetic: `sniffImage` refuses anything under 12 bytes,
+   * because WebP's format marker ends at byte 12 and a file too short to identify is not one to
+   * guess at. A bare 8-byte signature is therefore correctly rejected — which cost a CI round
+   * trip here, on a test whose own fixture was less realistic than the rule it was exercising.
+   */
+  const PNG_BYTES = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(56),
   ]);
 
   test("each room offers somewhere to put a picture, and says none is there yet", async ({
