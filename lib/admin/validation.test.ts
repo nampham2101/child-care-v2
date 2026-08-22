@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   FieldReader,
   errorsByField,
+  placeholdersIn,
   type Validated,
 } from "@/lib/admin/validation";
 
@@ -204,5 +205,94 @@ describe("finish", () => {
       ok: true,
       value: { name: "Willow Grove" },
     });
+  });
+});
+
+/**
+ * The placeholder guard, which is the one rule here with no counterpart in the schema.
+ *
+ * Everything else in this file explains a constraint the database also enforces. Postgres has
+ * no opinion about `{since}` — the enforcement is next-intl, at build time, minutes after the
+ * publish, in a place nothing connects back to the edit. So this layer is not the friendly
+ * message for that failure; it is the only thing standing in front of it.
+ */
+describe("placeholdersIn", () => {
+  it("finds each placeholder once, in order", () => {
+    expect(placeholdersIn("Licensed since {since}, ages {ageRange}")).toEqual([
+      "{since}",
+      "{ageRange}",
+    ]);
+  });
+
+  it("does not repeat one that appears twice", () => {
+    expect(placeholdersIn("{count} of {count}")).toEqual(["{count}"]);
+  });
+
+  it("finds none in ordinary copy", () => {
+    expect(placeholdersIn("No screens in any room, at any age.")).toEqual([]);
+  });
+
+  /*
+   * Braces a person typed as punctuation are not placeholders, and must not be reported as
+   * something to "keep" — that would be an error message demanding they restore nonsense.
+   */
+  it("ignores braces that are not an identifier", () => {
+    expect(placeholdersIn("Open {} and { } and {two words}")).toEqual([]);
+  });
+});
+
+describe("prose", () => {
+  it("accepts a rewrite that keeps its placeholder", () => {
+    const reader = read({ bio: "Licensed every year since {since}." });
+    const value = reader.prose("bio", "Licence line", ["{since}"]);
+
+    expect(reader.finish(value)).toEqual({
+      ok: true,
+      value: "Licensed every year since {since}.",
+    });
+  });
+
+  it("refuses a rewrite that dropped one, and names it", () => {
+    const reader = read({ bio: "Licensed every year since 2009." });
+    reader.prose("bio", "Licence line", ["{since}"]);
+
+    expect(errorsOf(reader.finish(null)).bio).toContain("{since}");
+  });
+
+  it("names both when two are missing", () => {
+    const reader = read({ bio: "Nothing left." });
+    reader.prose("bio", "Hero line", ["{count}", "{ageRange}"]);
+
+    const message = errorsOf(reader.finish(null)).bio;
+    expect(message).toContain("{count}");
+    expect(message).toContain("{ageRange}");
+  });
+
+  it("allows longer copy than a one-line field would", () => {
+    const long = "a".repeat(400);
+    const reader = read({ bio: long });
+    const value = reader.prose("bio", "Bio", [], { max: 600 });
+
+    expect(reader.finish(value).ok).toBe(true);
+  });
+
+  it("reports the length and the limit when it is too long", () => {
+    const reader = read({ bio: "a".repeat(130) });
+    reader.prose("bio", "Room name", [], { max: 120 });
+
+    const message = errorsOf(reader.finish(null)).bio;
+    expect(message).toContain("130");
+    expect(message).toContain("120");
+  });
+
+  /*
+   * Emptying a string is not a way to delete it. The row still renders, so the page would show
+   * a gap — and the database refuses it anyway with a check constraint.
+   */
+  it("refuses an empty value and says why", () => {
+    const reader = read({ bio: "   " });
+    reader.prose("bio", "Bio", []);
+
+    expect(errorsOf(reader.finish(null)).bio).toContain("cannot be empty");
   });
 });
