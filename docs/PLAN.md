@@ -125,10 +125,12 @@ touches routing.
 **Why `/admin` sits outside the locale tree at all.** The locale segment exists so a *parent* can
 read the site in their language. Staff are the people who work at this one center, and the admin is
 a tool rather than a publication, so prefixing it would add `/en/` to every staff URL and imply a
-translated admin that nothing intends to build. *Tripwire:* #77 puts prose editing in the admin, and
-a staff member will need to choose which **content** locale they are editing. That is a control
-inside the page, not a locale prefix on the URL — and with the second and third locales now
-confirmed as coming, the two are easy to conflate and expensive to unpick.
+translated admin that nothing intends to build. *Tripwire, now handled:* #77 put prose editing in
+the admin, and a staff member will eventually need to choose which **content** locale they are
+editing. Every function in `lib/admin/editable.ts` takes a locale and defaults to
+`routing.defaultLocale`; **no picker is rendered**, because one shipped locale makes a control with
+a single option into dead UI. When #53 or #54 lands, that control goes *inside the page* and never
+as a prefix on the admin URL — the two are easy to conflate and expensive to unpick.
 
 **Three decisions inside the guard, each with a cheaper wrong answer:**
 
@@ -527,6 +529,40 @@ place.
 
 **The backfill was proven lossless by digest**, not by eye: 279 rows, md5
 `5c1835181bb32db57ea6381147f53257` on both the database and the pre-migration catalogue.
+
+### What the copy editor decided (#77)
+
+Copy is editable at `/admin/copy`, on the same draft-then-publish path as facts.
+
+**Grouped by where the words appear, not by namespace.** Thirteen groups, ordered the way a parent
+moves through the site. 279 strings is a *finding* problem before it is an editing one, and a staff
+member knows the typo is on the FAQ page and nothing about how it is stored. Each group carries its
+own count of unpublished edits; one total at the top would say "you have edits somewhere", which is
+the state that sends someone opening all thirteen.
+
+**A `{placeholder}` cannot be deleted.** Nineteen strings interpolate a value at render time.
+next-intl throws on a message missing one, and since #76 that throw fails the build — so the edit
+would save, publish, and break the next deploy minutes later with nothing connecting the two.
+`FieldReader.prose` refuses it and names the placeholder; the required list is re-derived
+server-side from the stored row, never read from the form.
+
+**The field label is derived from the key**, so `placeWaitlistAnswer` reads "Place waitlist answer".
+This bends #74's *never show a column name*, knowingly: a prose row has no name column, its key is
+the only handle it has, and a form field still needs an accessible name. The alternative was 279
+hand-written labels to keep in step with the rows — the duplicated join #76 just finished removing.
+*Tripwire:* if these labels start being read as identifiers rather than as headings, the answer is a
+`label` column, not a cleverer transform.
+
+**The length limit is per group**, half again the longest string it holds, floored at 120. One fixed
+limit is useless across a range running from "Infants" to a 276-character FAQ answer. Derived from
+the same rows in the form and in the action, so the number shown is the number checked.
+
+**No locale picker.** Every function takes a locale; nothing renders a control, because one shipped
+locale makes it a menu with one item.
+
+**Still not possible: creating content.** Adding a room or a staff member needs a new key, and the
+open question is how a key is generated rather than whether it is typed. #76 lifted the blocker
+(copy is editable now); the question itself is untouched.
 
 Why that is the right trade: the two halves fail differently. A wrong ratio or a wrong monthly rate
 is a fact a parent acts on, and those are exactly the values that were duplicated across pages before
