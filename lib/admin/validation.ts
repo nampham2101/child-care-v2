@@ -209,6 +209,23 @@ export class FieldReader {
     return { display, href: `mailto:${display}` };
   }
 
+  /**
+   * Record a problem this class could not have found on its own.
+   *
+   * Added by #78 for the file upload, and the reasoning is the reason it is not a special case:
+   * whether some bytes are really a JPEG is decided by `lib/admin/image.ts`, not here, but the
+   * **result belongs in the same list as everything else**.
+   *
+   * Without this the upload action had to `return failed(...)` the moment the bytes were wrong,
+   * which returned before the other fields were checked — so a staff member who chose the wrong
+   * file *and* left the description empty was told about only one of them, and which one
+   * depended on the order the action happened to run its checks in. Worse, the message arrived
+   * as a page-level banner rather than under the field it was about.
+   */
+  reject(field: string, message: string): void {
+    this.fail(field, message);
+  }
+
   /** Everything that went wrong, or the value, once every field has been read. */
   finish<T>(value: T): Validated<T> {
     return this.errors.length > 0

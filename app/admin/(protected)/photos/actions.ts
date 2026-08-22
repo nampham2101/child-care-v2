@@ -68,6 +68,19 @@ export async function saveSpacePhoto(
     );
   }
 
+  /*
+   * The bytes are checked HERE, before `finish`, so a bad file and an empty description are
+   * reported together rather than whichever the action happened to reach first. The result goes
+   * in as a field error on the file input, so the message appears under the control it is about
+   * instead of as a page-level banner.
+   */
+  let checked: ReturnType<typeof checkUpload> | null = null;
+  if (hasFile) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    checked = checkUpload(bytes, file.type);
+    if (!checked.ok) reader.reject(`photo__${key}`, checked.message);
+  }
+
   const validation = reader.finish(alt);
   if (!validation.ok) return invalid(validation.errors);
 
@@ -88,9 +101,12 @@ export async function saveSpacePhoto(
       return saved(`The description of ${space.label}`);
     }
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const check = checkUpload(bytes, file.type);
-    if (!check.ok) return failed(check.message);
+    // Narrowed rather than re-checked: `finish` above already refused every rejection, so
+    // reaching here means the bytes passed. Re-reading the file would parse it twice.
+    if (!checked?.ok) {
+      return failed("The photograph could not be read. Choose it again.");
+    }
+    const check = checked;
 
     /*
      * The organization comes from `current_org_id()` rather than from anything the form sent.
@@ -110,7 +126,7 @@ export async function saveSpacePhoto(
 
     const { error: uploadError } = await supabase.storage
       .from("spaces")
-      .upload(storagePath, bytes, {
+      .upload(storagePath, await file.arrayBuffer(), {
         contentType: check.image.type,
         // Never overwrite. Paths carry a timestamp, so a collision means two uploads in the
         // same millisecond — and silently replacing bytes the published row points at is the

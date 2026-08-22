@@ -26,6 +26,25 @@ import { formAlert, formStatus } from "./announcer";
  * make that a three-row scan and fail a suite that has nothing to do with the editor. So the
  * twin created here is deleted afterwards, through the same member session that made it.
  */
+/**
+ * **Every test in this file runs in order, on one worker.**
+ *
+ * `playwright.config.ts` sets `fullyParallel: true`, which parallelises across describe blocks
+ * as well as across files. Every block here mutates the *same* fixture rows and each one calls
+ * `restoreFixtureState` in its own `beforeAll` and `afterAll` — so run concurrently they reset
+ * the database underneath each other, and the symptom is a test failing on a value some other
+ * block had just restored.
+ *
+ * This was latent while there were two blocks and surfaced when #78 added a third: the facts
+ * editor started failing on a signed-out page, nowhere near the code that changed. Configuring
+ * it at file scope rather than per describe is what makes it stay fixed when a fourth is added.
+ *
+ * The cost is real — this file is the slowest in the suite and it no longer shares out — and it
+ * is the price of one shared database. Per-test isolation would need a scratch organization per
+ * worker, which is a bigger change than #78 should carry.
+ */
+test.describe.configure({ mode: "serial" });
+
 const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const TEST_PASSWORD = process.env.SUPABASE_TEST_PASSWORD;
@@ -154,12 +173,6 @@ test.describe("the facts editor", () => {
     !TEST_PASSWORD,
     "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
   );
-
-  /*
-   * Serial: these tests share two database rows, and running them in parallel would have one
-   * asserting a value another is midway through changing.
-   */
-  test.describe.configure({ mode: "serial" });
 
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
@@ -370,8 +383,6 @@ test.describe("the copy editor", () => {
     "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
   );
 
-  test.describe.configure({ mode: "serial" });
-
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
@@ -520,8 +531,6 @@ test.describe("photographs of the spaces", () => {
     "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
   );
 
-  test.describe.configure({ mode: "serial" });
-
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
@@ -565,12 +574,24 @@ test.describe("photographs of the spaces", () => {
         buffer: Buffer.from("%PDF-1.7 this is a document, not a room"),
       });
 
+    // Filled in, so what this test proves is the byte check rather than the empty-description
+    // rule. Both are reported together now, but a blank description here would leave it
+    // ambiguous which rule actually fired.
+    await page
+      .getByLabel("Description of the photograph")
+      .first()
+      .fill("FIXTURE room, described");
+
     await page
       .getByRole("button", { name: /Upload|Save draft/ })
       .first()
       .click();
 
-    await expect(formAlert(page)).toContainText(/not a JPEG, PNG or WebP/i);
+    // Under the file input, not as a page banner — the message is about that control.
+    await expect(
+      page.getByText(/not a JPEG, PNG or WebP/i).first(),
+    ).toBeVisible();
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
   });
 
   test("a real image uploads, and stays out of the public site until publish", async ({
