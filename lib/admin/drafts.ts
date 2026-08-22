@@ -35,7 +35,8 @@ export type DraftableTable =
   | "staff"
   | "tuition_schedules"
   | "tuition_rates"
-  | "tuition_fees";
+  | "tuition_fees"
+  | "prose";
 
 /** A row as it comes back from any of those tables: an id, a status, and its own columns. */
 export type DraftableRow = {

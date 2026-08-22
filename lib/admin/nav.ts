@@ -36,4 +36,10 @@ export const ADMIN_SECTIONS = [
     description:
       "The monthly rate for every room and schedule, plus registration and other fees.",
   },
+  {
+    href: "/admin/copy",
+    label: "The words",
+    description:
+      "Every sentence on the site — room descriptions, staff bios, headings, and each FAQ answer.",
+  },
 ] as const;
