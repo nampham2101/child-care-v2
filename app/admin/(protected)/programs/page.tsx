@@ -4,7 +4,11 @@ import { savePrograms } from "@/app/admin/(protected)/programs/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { Field } from "@/components/admin/Field";
 import { Section } from "@/components/admin/Section";
-import { getEditablePrograms, getEditableRhythm } from "@/lib/admin/editable";
+import {
+  getAdminCatalogue,
+  getEditablePrograms,
+  getEditableRhythm,
+} from "@/lib/admin/editable";
 import { programLabel, rhythmLabel } from "@/lib/admin/labels";
 
 export const metadata: Metadata = { title: "Rooms and the day" };
@@ -17,9 +21,10 @@ export const metadata: Metadata = { title: "Rooms and the day" };
  * page and 1:5 on another is worse than publishing no ratio at all.
  */
 export default async function ProgramsPage() {
-  const [programs, rhythm] = await Promise.all([
+  const [programs, rhythm, catalogue] = await Promise.all([
     getEditablePrograms(),
     getEditableRhythm(),
+    getAdminCatalogue(),
   ]);
 
   return (
@@ -33,7 +38,7 @@ export default async function ProgramsPage() {
       <div className="mt-8">
         <EditorForm action={savePrograms}>
           {programs.map((program) => {
-            const label = programLabel(program.key);
+            const label = programLabel(catalogue, program.key);
 
             return (
               <Section
@@ -86,7 +91,7 @@ export default async function ProgramsPage() {
             pending={rhythm.some((slot) => slot.hasDraft)}
           >
             {rhythm.map((slot) => {
-              const label = rhythmLabel(slot.labelKey);
+              const label = rhythmLabel(catalogue, slot.labelKey);
 
               return (
                 <div

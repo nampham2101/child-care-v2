@@ -47,6 +47,22 @@ if (!TEST_PASSWORD && process.env.CI) {
 const DRAFT_KEY = "rlsFixtureDraft";
 
 /**
+ * The fixture organization's prose, added by #77 in `supabase/fixtures/rls.sql`.
+ *
+ * `PROSE_ROOM_LABEL` is the one that guards a regression rather than a feature: #76 emptied
+ * `messages/en.json` while `lib/admin/labels.ts` was still reading it, so every heading in the
+ * facts editor fell back to its raw database key. Asserting this text appears is asserting that
+ * labels come from the database.
+ */
+const PROSE_NAMESPACE = "FaqPage";
+const PROSE_KEY = "rlsFixtureAnswer";
+const PROSE_FIELD_LABEL = "Rls fixture answer";
+const ORIGINAL_ANSWER =
+  "FIXTURE answer holding {count} — must never be visible";
+const EDITED_ANSWER = "FIXTURE answer holding {count} — edited by the suite";
+const PROSE_ROOM_LABEL = "FIXTURE room name — other org, not ours";
+
+/**
  * Puts the fixture organization's two program rows back exactly as `supabase/fixtures/rls.sql`
  * leaves them, whatever happened to the assertions above.
  *
@@ -88,6 +104,23 @@ async function restoreFixtureState() {
     .update({ status: "draft" })
     .eq("key", DRAFT_KEY);
 
+  /*
+   * Prose, restored on the same principle: remove any draft twin this suite created, then put
+   * the published row back to its fixture wording. The publish test promotes every pending
+   * draft, so an edited value can end up published rather than sitting as a twin — which is why
+   * the update runs unconditionally rather than only when a draft was found.
+   */
+  await member
+    .from("prose")
+    .delete()
+    .eq("key", PROSE_KEY)
+    .eq("status", "draft");
+
+  await member
+    .from("prose")
+    .update({ value: ORIGINAL_ANSWER, status: "published" })
+    .eq("key", PROSE_KEY);
+
   await member.auth.signOut();
 }
 
@@ -124,6 +157,7 @@ test.describe("the facts editor", () => {
       "Rooms and the day",
       "Staff",
       "Tuition",
+      "The words",
     ]) {
       await expect(
         page.getByRole("link", { name: section, exact: true }).first(),
@@ -302,5 +336,151 @@ test.describe("the facts editor", () => {
     await expect(
       page.getByRole("button", { name: "Nothing to publish" }),
     ).toBeDisabled();
+  });
+});
+
+/**
+ * The copy editor (#77), and the regression #76 left behind.
+ *
+ * Separate from the facts describe block because it touches a different table and needs its own
+ * serial ordering, but it shares `restoreFixtureState` — the prose row it edits is put back by
+ * the same helper, for the same cross-suite reason.
+ */
+test.describe("the copy editor", () => {
+  test.skip(
+    !TEST_PASSWORD,
+    "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
+  );
+
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(restoreFixtureState);
+  test.afterAll(restoreFixtureState);
+
+  /**
+   * The assertion that should have existed before #76 and did not.
+   *
+   * `/admin/programs` heads each room with its name, looked up from the site's copy. When that
+   * copy moved into the database and `lib/admin/labels.ts` kept reading the emptied JSON file,
+   * every heading became a raw column value and the whole suite stayed green — because it only
+   * ever asserted on fields.
+   *
+   * So: the readable name must be on the page, and the raw key must not be.
+   */
+  test("room headings show the name, not the database key", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/programs", { waitUntil: "load" });
+
+    await expect(page.getByText(PROSE_ROOM_LABEL)).toBeVisible();
+    await expect(page.getByText(PUBLISHED_KEY, { exact: true })).toHaveCount(0);
+  });
+
+  test("the words index lists somewhere to go, with a count", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/copy", { waitUntil: "load" });
+
+    await expect(
+      page.getByRole("link", { name: /FAQ page/ }).first(),
+    ).toBeVisible();
+
+    // The index groups by where the words appear. A namespace is a column name and must not
+    // reach the screen — the same rule the facts editor follows for `key`.
+    await expect(page.getByText(PROSE_NAMESPACE, { exact: true })).toHaveCount(
+      0,
+    );
+  });
+
+  /**
+   * The whole of #77's acceptance bar: *a staff member can find and fix a typo on `/faq`
+   * without help.* Navigated by clicking, not by URL, because "find" is half the requirement.
+   */
+  test("a typo can be found and fixed, and does not go live", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/copy", { waitUntil: "load" });
+    await page
+      .getByRole("link", { name: /FAQ page/ })
+      .first()
+      .click();
+
+    const field = page.getByLabel(PROSE_FIELD_LABEL);
+    await expect(field).toHaveValue(ORIGINAL_ANSWER);
+
+    await field.fill(EDITED_ANSWER);
+    await page.getByRole("button", { name: "Save draft" }).click();
+
+    // Saved as a draft, and the message has to say the site has not moved — `docs/PLAN.md` is
+    // emphatic that this interface never implies a change is live when it is not.
+    await expect(formStatus(page)).toContainText(/draft/i);
+    await expect(formStatus(page)).toContainText(/still shows/i);
+
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(EDITED_ANSWER);
+    await expect(page.getByText("Unpublished edit").first()).toBeVisible();
+  });
+
+  /**
+   * The placeholder guard, end to end.
+   *
+   * `lib/admin/validation.test.ts` proves the rule; this proves the form is actually wired to
+   * it. The failure it prevents is the worst one this editor can produce: next-intl throws on a
+   * message missing its placeholder, and since #76 that throw **fails the build** — so removing
+   * a brace here would publish successfully and break the next deploy, minutes later, with
+   * nothing connecting the two.
+   */
+  test("removing a placeholder is refused, and says which one", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/copy/faq", { waitUntil: "load" });
+
+    /*
+     * Read the current value rather than assuming it. These tests are serial and share this
+     * row, so the test above may have left a saved draft against it — comparing to the fixture
+     * wording would be asserting that the *previous* test did nothing, which is not the
+     * property under test here. What matters is that a refused save changes nothing, whatever
+     * the field happened to hold when this test began.
+     */
+    const before = await page.getByLabel(PROSE_FIELD_LABEL).inputValue();
+    expect(before).toContain("{count}");
+
+    await page
+      .getByLabel(PROSE_FIELD_LABEL)
+      .fill("FIXTURE answer with the placeholder taken out");
+    await page.getByRole("button", { name: "Save draft" }).click();
+
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
+    await expect(page.getByText(/\{count\}/).first()).toBeVisible();
+
+    // Refused means nothing was written.
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(before);
+  });
+
+  /** An empty box is not how you delete a sentence — the page would render a gap. */
+  test("emptying a field is refused", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/copy/faq", { waitUntil: "load" });
+
+    await page.getByLabel(PROSE_FIELD_LABEL).fill("   ");
+    await page.getByRole("button", { name: "Save draft" }).click();
+
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
+    await expect(page.getByText(/cannot be empty/i).first()).toBeVisible();
+  });
+
+  /** A slug with no group is a 404, not a form with no fields. */
+  test("an unknown group is not found", async ({ page }) => {
+    await signIn(page);
+    const response = await page.goto("/admin/copy/not-a-real-group", {
+      waitUntil: "load",
+    });
+
+    expect(response?.status()).toBe(404);
   });
 });

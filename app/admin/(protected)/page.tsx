@@ -46,8 +46,7 @@ export default async function AdminHomePage() {
         Not here yet
       </h2>
       <p className="mt-3 max-w-prose text-sm text-ink-700">
-        The words on the pages — room descriptions, staff bios, every FAQ answer
-        (#76, #77). Photographs of the rooms and the garden (#78).
+        Photographs of the rooms and the garden (#78).
       </p>
     </>
   );

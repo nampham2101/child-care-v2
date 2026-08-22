@@ -18,6 +18,19 @@
 
 export type FieldError = { field: string; message: string };
 
+/**
+ * The ICU placeholders in a message — `Licensed since {since}` → `["{since}"]`.
+ *
+ * Deliberately narrow: `{` followed by a plain identifier and `}`. next-intl's full ICU syntax
+ * also has plural and select forms (`{count, plural, ...}`), and none of the site's 279 strings
+ * use one. Matching only what is actually there means this cannot mangle a brace that a staff
+ * member typed as punctuation, and the day a plural form does appear the guard simply does not
+ * fire on it rather than misreporting what to keep.
+ */
+export function placeholdersIn(value: string): string[] {
+  return [...new Set(value.match(/\{[a-zA-Z][a-zA-Z0-9]*\}/g) ?? [])];
+}
+
 export type Validated<T> =
   { ok: true; value: T } | { ok: false; errors: FieldError[] };
 
@@ -56,6 +69,63 @@ export class FieldReader {
       );
       return value;
     }
+    return value;
+  }
+
+  /**
+   * A paragraph of copy, with its placeholders protected.
+   *
+   * Two things separate this from `text`. It allows real length — a staff bio is 200-odd
+   * characters where a phone number is 20 — and it refuses to let a `{placeholder}` be dropped.
+   *
+   * **The placeholder rule is the important half.** 19 of the site's strings interpolate a
+   * value at render time: `Licensed since {since}`, `{count} teachers and staff`. next-intl
+   * throws on a message whose placeholder is missing, and since #76 that throw **fails the
+   * build**. So a staff member who tidied "Licensed since {since}" into "Licensed since 2009"
+   * would publish a change that stopped the site building, discover it minutes later as a
+   * failed deploy, and have no way to connect the two. Caught here, it is one sentence naming
+   * the exact thing to put back.
+   *
+   * `required` are the placeholders the value being replaced contains — derived server-side
+   * from the row, never from the form, so a hand-crafted POST cannot claim there were none.
+   */
+  prose(
+    field: string,
+    label: string,
+    required: readonly string[],
+    options: { max?: number } = {},
+  ): string {
+    const value = this.raw(field);
+    const max = options.max ?? 600;
+
+    if (!value) {
+      this.fail(
+        field,
+        `${label} cannot be empty. To remove a section, ask a developer — an empty string leaves a blank space on the page.`,
+      );
+      return "";
+    }
+    if (value.length > max) {
+      this.fail(
+        field,
+        `${label} is too long — ${value.length} characters, and the limit is ${max}.`,
+      );
+      return value;
+    }
+
+    const missing = required.filter(
+      (placeholder) => !value.includes(placeholder),
+    );
+    if (missing.length > 0) {
+      this.fail(
+        field,
+        missing.length === 1
+          ? `${label} has to keep ${missing[0]} — the site fills that in with a real value, and the page will not build without it.`
+          : `${label} has to keep ${missing.join(" and ")} — the site fills those in with real values, and the page will not build without them.`,
+      );
+      return value;
+    }
+
     return value;
   }
 

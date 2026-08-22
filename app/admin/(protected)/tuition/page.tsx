@@ -4,7 +4,11 @@ import { saveTuition } from "@/app/admin/(protected)/tuition/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { Field } from "@/components/admin/Field";
 import { Section } from "@/components/admin/Section";
-import { getEditableFees, getEditableRates } from "@/lib/admin/editable";
+import {
+  getAdminCatalogue,
+  getEditableFees,
+  getEditableRates,
+} from "@/lib/admin/editable";
 import { programLabel, scheduleLabel } from "@/lib/admin/labels";
 import { formatRate } from "@/lib/tuition";
 
@@ -19,9 +23,10 @@ export const metadata: Metadata = { title: "Tuition" };
  * page — #74's rule about not growing a second copy of the read path.
  */
 export default async function TuitionPage() {
-  const [rates, fees] = await Promise.all([
+  const [rates, fees, catalogue] = await Promise.all([
     getEditableRates(),
     getEditableFees(),
+    getAdminCatalogue(),
   ]);
 
   const bySchedule = new Map<string, typeof rates>();
@@ -44,7 +49,7 @@ export default async function TuitionPage() {
       <div className="mt-8">
         <EditorForm action={saveTuition}>
           {[...bySchedule.entries()].map(([scheduleKey, scheduleRates]) => {
-            const label = scheduleLabel(scheduleKey);
+            const label = scheduleLabel(catalogue, scheduleKey);
 
             return (
               <Section
@@ -59,7 +64,7 @@ export default async function TuitionPage() {
               >
                 {scheduleRates.map((rate) => {
                   const pair = `${rate.scheduleId}|${rate.programId}`;
-                  const room = programLabel(rate.programKey);
+                  const room = programLabel(catalogue, rate.programKey);
 
                   return (
                     <div key={pair}>

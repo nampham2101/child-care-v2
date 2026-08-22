@@ -17,10 +17,13 @@ publish triggering a rebuild. Two things follow from that split, and both bite t
 
 - **No one can edit anything yet.** `v0.3.0` shipped a database with no editor — every fact is
   editable in principle and only through SQL in practice. That gap is the whole of `v0.4.0`.
-- **Prose has moved into the database** (#76). 279 of the 282 strings are rows in `public.prose`,
-  one per `(locale, namespace, key)`; `messages/<locale>.json` now holds only three chrome strings.
-  Copy is still not *editable* — that is #77 — but it is no longer in the catalogues, so do not send
-  anyone to `messages/en.json` to change a sentence.
+- **Prose is in the database and editable** (#76, #77). 279 of the 282 strings are rows in
+  `public.prose`, one per `(locale, namespace, key)`; `messages/<locale>.json` holds only three
+  chrome strings. Staff edit copy at `/admin/copy`, on the same draft-then-publish path as facts.
+  Do not send anyone to `messages/en.json` to change a sentence.
+- **A `{placeholder}` is load-bearing.** Nineteen strings interpolate a value at render time, and
+  next-intl throws on a message missing one — which now fails the build. `FieldReader.prose` is what
+  stops a staff member deleting one; do not weaken it.
 
 Merged is not shipped — only a published release reaches production.
 

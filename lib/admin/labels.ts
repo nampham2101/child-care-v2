@@ -1,69 +1,87 @@
 /**
  * Human names for the things the editor lists.
  *
- * ## The decision #74 asks for, stated here because this is where it is enforced
+ * ## Fixed here: #76 broke every one of these
+ *
+ * This module used to `import messages from "@/messages/en.json"` and look a name up in it.
+ * #76 moved the site's copy into the database and trimmed that file to three chrome strings, so
+ * every lookup started missing and falling back to the raw key. The facts editor went on saving
+ * correctly and started *reading* wrong: `/admin/programs` listed "infants" instead of
+ * "Infants", and `/admin/staff` told a staff member their own bio was missing and that it
+ * "needs a developer".
+ *
+ * The end-to-end suite stayed green because it asserts on the fields, not the headings. That
+ * gap is closed in `tests/e2e/admin-editor.spec.ts`.
+ *
+ * The names now come from the same place the copy does. Everything below is **pure** and takes
+ * the catalogue as an argument — `getAdminCatalogue()` in `lib/admin/editable.ts` does the
+ * reading. That keeps this file testable without a database, and it means a page fetches the
+ * catalogue once rather than each label opening its own connection.
+ *
+ * ## The decision #74 asks for, still enforced
  *
  * **`key` and `label_key` are not editable, and are never shown.** #74 offers two ways to
- * handle the risk they carry — prevent the edit in the UI, or validate it against the message
- * catalogue at save time — and this is the first.
+ * handle the risk they carry — prevent the edit in the UI, or validate it at save time — and
+ * this is the first.
  *
- * The reasoning is not only safety. Those columns are the join between a database row and a
- * namespace in `messages/en.json`; a staff member who changed `infants` to `babies` would get a
- * blank card on the public site, and the key-coverage test that would catch it only runs at
- * build time, so the first sign is a broken page. But the simpler argument is #74's own
- * acceptance bar: *a staff member can complete the whole edit without being told a database
- * column name.* A `key` **is** a database column name. Validating it would mean showing it.
+ * The reasoning is not only safety. Those columns join a database row to its copy; a staff
+ * member who changed `infants` to `babies` would break the join. Since #76 that failure is loud
+ * — the build stops — where it used to be a silently blank card. Louder, and still not a reason
+ * to make keys editable, because #74's acceptance bar is unchanged: *a staff member can
+ * complete the whole edit without being told a database column name.* A `key` **is** one.
  *
- * The consequence to be honest about: **adding a room or a staff member is not possible in this
- * release**, because a new row needs a new key and its copy in the catalogue, and the
- * catalogue is not editable until #76 moves prose into the database. That is a real limit of
- * this ticket rather than an oversight, and it is why the editor changes existing content and
- * does not create it — see `lib/admin/drafts.ts`.
- *
- * *Tripwire:* when #76 lands and prose is editable, revisit this. At that point a staff member
- * could genuinely create a room, and the question becomes how a key is generated rather than
- * whether it is typed.
+ * **The limit that just lifted:** adding a room or a staff member needed a new key *and* its
+ * copy, and copy was not editable. It is now. Creating rows is still out of scope — the open
+ * question is how a key gets generated rather than whether it is typed — but it is no longer
+ * blocked on the catalogue. `docs/PLAN.md` carries that tripwire.
  */
-import messages from "@/messages/en.json";
 
-const CATALOGUE = messages as Record<string, Record<string, string>>;
+/** The shape `getAdminCatalogue()` returns: namespace → key → string. */
+export type LabelCatalogue = Record<string, Record<string, string>>;
 
 export type Label = {
   /** What to show. Falls back to the raw key rather than rendering nothing. */
   text: string;
-  /** True when the catalogue has no copy for this key — a broken public page waiting to happen. */
+  /** True when there is no copy for this key — a broken public page waiting to happen. */
   missing: boolean;
 };
 
 /**
- * Looks up a key's display name in a namespace of the English catalogue.
+ * Looks up a key's display name in a namespace.
  *
- * English rather than the active locale, because the admin is not locale-prefixed and its
- * chrome is not translated — see `lib/admin/nav.ts`. When #77 brings translated content into
- * the editor, choosing which locale is being *edited* is a control inside the page and a
- * separate concern from this.
+ * The catalogue is the admin locale's, and draft-aware, because a staff member who renamed a
+ * room and has not published yet should see the new name on the editor that produced it.
+ * `lib/admin/nav.ts` records why the admin's own chrome is not translated; which locale's
+ * *content* is being edited is a separate concern, handled in `lib/admin/editable.ts`.
  */
-export function labelFor(namespace: string, key: string): Label {
-  const text = CATALOGUE[namespace]?.[key];
+export function labelFor(
+  catalogue: LabelCatalogue,
+  namespace: string,
+  key: string,
+): Label {
+  const text = catalogue[namespace]?.[key];
   return text ? { text, missing: false } : { text: key, missing: true };
 }
 
 /** A room: `Programs.infants` → "Infants". */
-export function programLabel(key: string): Label {
-  return labelFor("Programs", key);
+export function programLabel(catalogue: LabelCatalogue, key: string): Label {
+  return labelFor(catalogue, "Programs", key);
 }
 
 /** A moment in the day: `Day.arrival` → "Arrival and free play". */
-export function rhythmLabel(labelKey: string): Label {
-  return labelFor("Day", labelKey);
+export function rhythmLabel(
+  catalogue: LabelCatalogue,
+  labelKey: string,
+): Label {
+  return labelFor(catalogue, "Day", labelKey);
 }
 
 /** A staff member's role: `Staff.mariaRole` → "Director". Their name is a database column. */
-export function staffRoleLabel(key: string): Label {
-  return labelFor("Staff", `${key}Role`);
+export function staffRoleLabel(catalogue: LabelCatalogue, key: string): Label {
+  return labelFor(catalogue, "Staff", `${key}Role`);
 }
 
 /** A schedule: `TuitionPage.fiveDayName` → "Five days". */
-export function scheduleLabel(key: string): Label {
-  return labelFor("TuitionPage", `${key}Name`);
+export function scheduleLabel(catalogue: LabelCatalogue, key: string): Label {
+  return labelFor(catalogue, "TuitionPage", `${key}Name`);
 }

@@ -120,3 +120,40 @@ on conflict (org_id, key) do update set
   group_size = excluded.group_size,
   sort_order = excluded.sort_order,
   status = excluded.status;
+
+-- ---------------------------------------------------------------------------------------
+-- Prose for the fixture organization (#77)
+-- ---------------------------------------------------------------------------------------
+--
+-- The editor suite signs in as this account, so without these rows /admin/copy has nothing to
+-- show it and every group 404s. Two rows, both published, chosen for what they let a test prove:
+--
+--   * The `Programs` row is what makes a LABEL resolve. #76 emptied messages/en.json and
+--     lib/admin/labels.ts kept reading it, so every heading in the facts editor silently fell
+--     back to its raw database key — "infants" instead of "Infants". Nothing caught it, because
+--     the end-to-end suite asserted on fields and never on headings. With this row present,
+--     /admin/programs must render this text rather than `rlsFixturePublished`.
+--
+--   * The `FaqPage` row carries `{count}` on purpose. It is what the placeholder guard is
+--     tested against: next-intl throws on a message whose placeholder is missing, and since #76
+--     that throw fails the build — so a staff member deleting a brace has to be refused at save
+--     time, not discovered in a broken deploy.
+--
+-- Both are `published` and there is deliberately no draft twin here, unlike the programs above.
+-- A permanently-draft prose row would be promoted by the publish test and then contradict
+-- whichever suite expected it to still be a draft — the exact cross-suite breakage the restore
+-- helper in tests/e2e/admin-editor.spec.ts exists to undo. Drafts here are created by the test
+-- that needs one and removed by that same test.
+--
+-- Values are absurd for the same reason the programs are: if either ever reaches a public page,
+-- it should be unmistakable rather than looking like plausible copy.
+insert into public.prose (org_id, locale, namespace, key, value, status)
+select o.id, 'en', v.namespace, v.key, v.value, 'published'
+from public.orgs o
+cross join (values
+  ('Programs', 'rlsFixturePublished', 'FIXTURE room name — other org, not ours'),
+  ('FaqPage',  'rlsFixtureAnswer',    'FIXTURE answer holding {count} — must never be visible')
+) as v(namespace, key, value)
+where o.slug = 'rls-fixture'
+on conflict (org_id, locale, namespace, key) where status = 'published'
+do update set value = excluded.value;
