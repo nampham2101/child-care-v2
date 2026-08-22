@@ -121,6 +121,23 @@ async function restoreFixtureState() {
     .update({ value: ORIGINAL_ANSWER, status: "published" })
     .eq("key", PROSE_KEY);
 
+  /*
+   * Photographs (#78). The suite uploads real objects into the bucket, so both halves are
+   * cleared: the media rows, and the bytes they point at. Storage is not covered by
+   * publish_org_drafts or by any other restore, so an object left behind here would accumulate
+   * silently on every CI run.
+   */
+  const { data: strayMedia } = await member
+    .from("media")
+    .select("storage_path");
+
+  if (strayMedia && strayMedia.length > 0) {
+    await member.storage
+      .from("spaces")
+      .remove(strayMedia.map((row) => row.storage_path));
+  }
+  await member.from("media").delete().neq("key", "");
+
   await member.auth.signOut();
 }
 
@@ -158,6 +175,7 @@ test.describe("the facts editor", () => {
       "Staff",
       "Tuition",
       "The words",
+      "Photographs",
     ]) {
       await expect(
         page.getByRole("link", { name: section, exact: true }).first(),
@@ -482,5 +500,124 @@ test.describe("the copy editor", () => {
     });
 
     expect(response?.status()).toBe(404);
+  });
+});
+
+/**
+ * Photographs of the spaces (#78).
+ *
+ * The first untrusted input this system accepts, so the case that matters most is the refusal:
+ * `lib/admin/image.test.ts` proves the byte-sniffing in isolation, and this proves the upload
+ * form is actually wired to it rather than trusting the browser's content type.
+ *
+ * Files are built in memory rather than committed as fixtures. A real photograph in the
+ * repository would be a binary blob nobody can review in a diff, and what is under test is the
+ * boundary — eight bytes of PNG signature exercise it exactly as a 4 MB photo would.
+ */
+test.describe("photographs of the spaces", () => {
+  test.skip(
+    !TEST_PASSWORD,
+    "Needs SUPABASE_TEST_PASSWORD. It is a GitHub secret and runs in CI.",
+  );
+
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(restoreFixtureState);
+  test.afterAll(restoreFixtureState);
+
+  /** Eight bytes that really are a PNG signature. */
+  const PNG_BYTES = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
+
+  test("each room offers somewhere to put a picture, and says none is there yet", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await expect(page.getByText(/No photograph yet/).first()).toBeVisible();
+
+    // The rule that keeps this feature free of any consent question belongs on the screen
+    // where someone would otherwise break it, not only in docs/PLAN.md.
+    await expect(
+      page.getByText(/never of children or staff/i).first(),
+    ).toBeVisible();
+  });
+
+  /**
+   * A renamed file, which is the case #78 is written around: *a content-type header is a claim,
+   * not a fact.* The browser will label this `image/png` because of its name; the bytes are a
+   * PDF, and the server has to notice.
+   */
+  test("a file that only claims to be an image is refused", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page
+      .getByLabel(/Choose a photograph|Replace the photograph/)
+      .first()
+      .setInputFiles({
+        name: "room.png",
+        mimeType: "image/png",
+        buffer: Buffer.from("%PDF-1.7 this is a document, not a room"),
+      });
+
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    await expect(formAlert(page)).toContainText(/not a JPEG, PNG or WebP/i);
+  });
+
+  test("a real image uploads, and stays out of the public site until publish", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page
+      .getByLabel(/Choose a photograph|Replace the photograph/)
+      .first()
+      .setInputFiles({
+        name: "room.png",
+        mimeType: "image/png",
+        buffer: PNG_BYTES,
+      });
+
+    await page
+      .getByLabel("Description of the photograph")
+      .first()
+      .fill("FIXTURE room, uploaded by the suite");
+
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    // Saved as a draft, and the message says the site has not moved — the promise every other
+    // editor page makes, kept here too.
+    await expect(formStatus(page)).toContainText(/draft/i);
+    await expect(formStatus(page)).toContainText(/still shows/i);
+
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByText("Unpublished edit").first()).toBeVisible();
+  });
+
+  /** An image needs a description, or it is invisible to a parent using a screen reader. */
+  test("a photograph with no description is refused", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/photos", { waitUntil: "load" });
+
+    await page.getByLabel("Description of the photograph").first().fill("   ");
+    await page
+      .getByRole("button", { name: /Upload|Save draft/ })
+      .first()
+      .click();
+
+    await expect(formAlert(page)).toContainText(/needs fixing/i);
   });
 });
