@@ -4,7 +4,7 @@ import { saveStaff } from "@/app/admin/(protected)/staff/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { CheckboxField, Field } from "@/components/admin/Field";
 import { Section } from "@/components/admin/Section";
-import { getEditableStaff } from "@/lib/admin/editable";
+import { getAdminCatalogue, getEditableStaff } from "@/lib/admin/editable";
 import { staffRoleLabel } from "@/lib/admin/labels";
 import { averageTenure, yearsWith } from "@/lib/staff";
 
@@ -20,7 +20,10 @@ export const metadata: Metadata = { title: "Staff" };
  * the `/staff` hero is built around.
  */
 export default async function StaffPage() {
-  const staff = await getEditableStaff();
+  const [staff, catalogue] = await Promise.all([
+    getEditableStaff(),
+    getAdminCatalogue(),
+  ]);
 
   // The same arithmetic the public page does, on the same shape of row. The draft values are
   // what is shown, so a staff member sees what the average *would become* before publishing.
@@ -45,7 +48,7 @@ export default async function StaffPage() {
       <div className="mt-8">
         <EditorForm action={saveStaff}>
           {staff.map((person) => {
-            const role = staffRoleLabel(person.key);
+            const role = staffRoleLabel(catalogue, person.key);
 
             return (
               <Section
