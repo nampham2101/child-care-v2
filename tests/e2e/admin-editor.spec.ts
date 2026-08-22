@@ -439,6 +439,16 @@ test.describe("the copy editor", () => {
     await signIn(page);
     await page.goto("/admin/copy/faq", { waitUntil: "load" });
 
+    /*
+     * Read the current value rather than assuming it. These tests are serial and share this
+     * row, so the test above may have left a saved draft against it — comparing to the fixture
+     * wording would be asserting that the *previous* test did nothing, which is not the
+     * property under test here. What matters is that a refused save changes nothing, whatever
+     * the field happened to hold when this test began.
+     */
+    const before = await page.getByLabel(PROSE_FIELD_LABEL).inputValue();
+    expect(before).toContain("{count}");
+
     await page
       .getByLabel(PROSE_FIELD_LABEL)
       .fill("FIXTURE answer with the placeholder taken out");
@@ -447,11 +457,9 @@ test.describe("the copy editor", () => {
     await expect(formAlert(page)).toContainText(/needs fixing/i);
     await expect(page.getByText(/\{count\}/).first()).toBeVisible();
 
-    // Refused means nothing was written: the stored value is still the one it started with.
+    // Refused means nothing was written.
     await page.reload({ waitUntil: "load" });
-    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(
-      ORIGINAL_ANSWER,
-    );
+    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(before);
   });
 
   /** An empty box is not how you delete a sentence — the page would render a gap. */
