@@ -22,13 +22,13 @@ export const IDLE: SaveState = { status: "idle" };
  *
  * "Saved" on its own is what a staff member would reasonably read as "the website now says
  * this", and it does not — `docs/PLAN.md` is emphatic that the admin must never imply a change
- * is live when it is not. Publishing arrives in #75; until then the honest sentence is that
- * the edit is stored and the site is unchanged.
+ * is live when it is not. Saving writes a draft; the site changes only when someone presses
+ * Publish, so the message points at the thing they still have to do.
  */
 export function saved(what: string): SaveState {
   return {
     status: "saved",
-    message: `${what} saved as a draft. The public site still shows the old version — publishing arrives in a later release.`,
+    message: `${what} saved as a draft. The public site still shows the old version — press Publish on the main page to send it out.`,
   };
 }
 

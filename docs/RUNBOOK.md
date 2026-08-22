@@ -20,6 +20,37 @@ file is the *how* — the steps to run when it is time to act.
   and then `netlify deploy --build --prod` — `--build` runs the Next.js runtime plugin, and `--prod`
   publishes to production.
 - **Rollback** is republishing a previous production deploy — seconds, no rebuild, no revert commit.
+- **Staff pressing Publish in the admin also deploys to production** — added by #75, and it is the
+  one other thing that does. See below; it cannot ship code, only content.
+
+### Content publishing, and why it is not a build hook
+
+`docs/PLAN.md` described this as "the app calls a Netlify build hook". **It cannot be**, and the
+reason is the gating above: a build hook builds a *git branch*, and neither branch here can carry a
+content publish. `release-prod` never receives commits, so a hook on it has nothing to build; `main`
+would produce a branch deploy rather than production.
+
+So pressing Publish dispatches
+[`.github/workflows/publish-content.yml`](../.github/workflows/publish-content.yml), which:
+
+1. Looks up the newest **published release tag**.
+2. Checks out that tag — *not* `main`.
+3. Runs the same `netlify deploy --build --prod` the release workflow runs.
+
+**The property this preserves: a content publish can never ship unreleased code.** Both production
+gates survive — the owner still decides what code goes live by cutting a release, and staff decide
+what content goes live by pressing Publish. It shares `release.yml`'s concurrency group, so a
+release and a content publish queue rather than race.
+
+It skips the CI gate deliberately: that exact commit was gated when it was released, and staff
+cannot make content structurally invalid because keys are not editable (#74). The build is still a
+real check — `lib/content.ts` raises on a missing published row and `lib/tuition.ts` on an
+incomplete rate sheet, so a bad publish fails the build and leaves production untouched.
+
+**If a publish reports that the rebuild could not be started**, the edits are safe: they are already
+published in the database, and the next successful build renders them. Check that
+`GITHUB_PUBLISH_TOKEN` is set and unexpired in Netlify, then either press Publish again after any
+edit, or cut a release.
 
 ### One-time prerequisites (owner)
 
@@ -33,6 +64,17 @@ file is the *how* — the steps to run when it is time to act.
    deploy (so PRs against `main` still get Deploy Previews), and keep Deploy Previews on.
 3. Netlify → Deploys → make sure the site is **unlocked** (auto publishing on), so the release
    workflow's `--prod` can publish.
+4. **For the admin's Publish button** (#75): create a GitHub **fine-grained personal access token**
+   scoped to this repository with **Actions: read and write** and nothing else, then set it in
+   **Netlify** → Site configuration → Environment variables as `GITHUB_PUBLISH_TOKEN`.
+
+   Netlify, not GitHub Actions — the admin runs on Netlify, and CI has no business rebuilding
+   production. Anyone holding this token can start unlimited production builds, so treat it like the
+   Netlify token: never committed, never in an issue, never in a chat. Rotate it by generating a new
+   one and replacing the variable; nothing else reads it.
+
+   Until it is set, saving and publishing still work as far as the database — a publish promotes the
+   drafts and then reports that the rebuild could not be started, without losing anything.
 
 ---
 

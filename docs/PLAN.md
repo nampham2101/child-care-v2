@@ -74,8 +74,15 @@ runtime, not as files picked off the CDN. The database is never in a visitor's r
   read, and a warm-cache handler invocation is effectively free here (but not zero, the way a CDN
   file read is).
 - **The admin area** (`/admin/*`) is server-rendered and talks to Supabase live. Only staff reach it.
-- When staff press **Publish**, the app calls a **Netlify build hook**, the site rebuilds, and
-  Netlify swaps in the new deploy — roughly 1–2 minutes end to end.
+- When staff press **Publish**, the app starts a production rebuild, the site rebuilds, and Netlify
+  swaps in the new deploy — roughly 1–2 minutes end to end.
+
+  **Corrected in #75: this is not a Netlify build hook, and cannot be.** A build hook builds a git
+  branch, and neither branch here can carry a content publish — `release-prod` is the production
+  branch and never receives commits, and `main` would produce a branch deploy rather than
+  production. Publish therefore dispatches a GitHub workflow that runs the project's one production
+  deploy path against the **newest release tag**, so a content publish can never ship unreleased
+  code and both production gates survive. `docs/RUNBOOK.md` has the mechanics.
 
 Regenerating the whole site on publish, rather than revalidating individual pages, means depending
 only on the most basic and most reliable thing the Next.js adapter does — server-render the admin —
@@ -604,6 +611,8 @@ human. That is accepted for a release that takes untrusted input for the first t
 | Supabase database password to hand, for the first `supabase db push` | **Needed for issue #47.** A different credential from the anon key; prompted for at the terminal, never committed |
 | Self-service signup turned off in Supabase Auth | **Done** (#72). Dashboard → Authentication → Sign In / Providers → "Allow new users to sign up" disabled. Supabase allows it by default, so this was an explicit step and it is the control that enforces invite-only — the sign-in page having no signup link enforces nothing |
 | Test account `rls-fixture@example.com` created, and `SUPABASE_TEST_PASSWORD` set as a GitHub **secret** | **Done** (#72). The third step is the one that was missed and will be missed again: creating the account is not enough, `supabase/fixtures/rls.sql` must then be re-run to insert its `profiles` row. Without it `current_org_id()` returns `NULL` and the suite fails as a *policy* error rather than as the setup error it is |
+| `GITHUB_PUBLISH_TOKEN` set in **Netlify's** environment variables | **Needed for #75's Publish button to reach production.** A GitHub fine-grained token scoped to this repository with **Actions: read and write** only. Netlify rather than GitHub Actions — that is where the admin runs, and CI must never be able to rebuild production. Without it, publishing still promotes the drafts and says plainly that the rebuild did not start |
+| Owner account in the `willow-grove` organization | **Needed to use the admin on real content** — issue #87. The fixture account is in a different organization by design |
 | Domain purchased, DNS pointed at Netlify | Needed before `v1.0.0` |
 | Google Business Profile created or claimed | Needed before `v1.0.0` |
 

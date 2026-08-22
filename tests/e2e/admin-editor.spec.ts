@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { test, expect } from "@playwright/test";
 
+import { formAlert, formStatus } from "./announcer";
+
 /**
  * The editor, driven the way a staff member drives it: sign in, change a number, save, and
  * check that the public site did not move.
@@ -41,12 +43,23 @@ if (!TEST_PASSWORD && process.env.CI) {
   );
 }
 
+/** The fixture organization's permanently-draft program. Other suites depend on its status. */
+const DRAFT_KEY = "rlsFixtureDraft";
+
 /**
- * Removes the draft twin this suite creates, whatever happened to the assertions. Uses a
- * member session rather than the service role, so a clean-up that row-level security would
- * refuse fails here rather than hiding a policy problem.
+ * Puts the fixture organization's two program rows back exactly as `supabase/fixtures/rls.sql`
+ * leaves them, whatever happened to the assertions above.
+ *
+ * This is stronger than deleting what the suite created, and it has to be. The publish test
+ * **promotes every pending draft**, which is the one operation here that changes rows this
+ * suite did not create: `rlsFixtureDraft` becomes published, and `tests/rls/authenticated.test.ts`
+ * asserts it is a draft. A clean-up that only removed twins would leave that suite red on the
+ * next run, for a reason nowhere near the editor.
+ *
+ * Uses a member session rather than the service role, so a restore that row-level security
+ * would refuse fails here instead of quietly hiding a policy problem.
  */
-async function deleteDraftTwins() {
+async function restoreFixtureState() {
   if (!PROJECT_URL || !ANON_KEY || !TEST_PASSWORD) return;
 
   const member = createClient(PROJECT_URL, ANON_KEY, {
@@ -56,11 +69,25 @@ async function deleteDraftTwins() {
     email: TEST_EMAIL,
     password: TEST_PASSWORD,
   });
+
+  // Any twin created by editing, published or not.
   await member
     .from("programs")
     .delete()
     .eq("key", PUBLISHED_KEY)
     .eq("status", "draft");
+
+  await member
+    .from("programs")
+    .update({ ratio: ORIGINAL_RATIO, status: "published" })
+    .eq("key", PUBLISHED_KEY);
+
+  // Promoted by a publish, or left alone. Either way it goes back to being a draft.
+  await member
+    .from("programs")
+    .update({ status: "draft" })
+    .eq("key", DRAFT_KEY);
+
   await member.auth.signOut();
 }
 
@@ -84,8 +111,8 @@ test.describe("the facts editor", () => {
    */
   test.describe.configure({ mode: "serial" });
 
-  test.beforeAll(deleteDraftTwins);
-  test.afterAll(deleteDraftTwins);
+  test.beforeAll(restoreFixtureState);
+  test.afterAll(restoreFixtureState);
 
   test("the index says how many edits are waiting, and links to every section", async ({
     page,
@@ -103,8 +130,9 @@ test.describe("the facts editor", () => {
       ).toBeVisible();
     }
 
-    // Until #75 there is no way to publish, so the interface has to say that rather than
-    // letting a staff member conclude the editor is broken when the site does not change.
+    // The site is prerendered, so there is always a window where a staff member can look at it
+    // and see the old value. The interface has to say so rather than let them conclude the
+    // editor is broken.
     await expect(
       page.getByText(/not published|Nothing is waiting/),
     ).toBeVisible();
@@ -159,8 +187,8 @@ test.describe("the facts editor", () => {
      * The message is the assertion, not just that a save happened. #74 and docs/PLAN.md both
      * require the interface never to imply an edit is live when it is not.
      */
-    await expect(page.getByRole("status")).toContainText("saved as a draft");
-    await expect(page.getByRole("status")).toContainText(
+    await expect(formStatus(page)).toContainText("saved as a draft");
+    await expect(formStatus(page)).toContainText(
       "public site still shows the old version",
     );
   });
@@ -213,7 +241,7 @@ test.describe("the facts editor", () => {
     await page.getByRole("textbox", { name: "Ratio" }).last().fill("");
     await page.getByRole("button", { name: "Save draft" }).click();
 
-    const alert = page.getByRole("alert").first();
+    const alert = formAlert(page);
     await expect(alert).toBeVisible();
 
     /*
@@ -225,5 +253,54 @@ test.describe("the facts editor", () => {
     await expect(page.getByText(/age_label|group_size|sort_order/)).toHaveCount(
       0,
     );
+  });
+
+  /**
+   * Publishing (#75), and it runs LAST on purpose: it promotes every pending draft in the
+   * fixture organization, which is the only operation in this file that changes rows the other
+   * tests rely on. `restoreFixtureState` puts them back afterwards.
+   *
+   * **CI has no `GITHUB_PUBLISH_TOKEN`, deliberately** — a test run has no business rebuilding
+   * production, and giving CI that credential would be the single most expensive mistake
+   * available here. So this exercises the partial path, which is the more interesting one to
+   * get right: the drafts *are* promoted, the rebuild is *not* started, and the message has to
+   * say both without sending a staff member off to retype work that is already saved.
+   *
+   * The happy path's two halves are covered where they can be: `tests/rls/publish.test.ts`
+   * proves the promotion, including that a signed-out visitor then reads the new value, and the
+   * owner verifies the real rebuild on production once (see the pull request).
+   */
+  test("publishing promotes the drafts and is honest when the rebuild cannot start", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    // Make something to publish, so the button is not in its disabled state.
+    await page.goto("/admin/programs", { waitUntil: "load" });
+    await page.getByRole("textbox", { name: "Ratio" }).last().fill("1:3");
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(formStatus(page)).toContainText("saved as a draft");
+
+    await page.goto("/admin", { waitUntil: "load" });
+
+    // The count is on the control, which is what makes publishing a deliberate act over a batch
+    // rather than an ambiguous button pressed once per edit.
+    const publish = page.getByRole("button", { name: /^Publish \d+ change/ });
+    await expect(publish).toBeEnabled();
+    await publish.click();
+
+    const result = formAlert(page);
+    await expect(result).toBeVisible();
+    // Published — so nothing was lost, and the message must not suggest otherwise.
+    await expect(result).toContainText("published");
+    await expect(result).toContainText("Nothing has been lost");
+    // And honest that the site has not caught up.
+    await expect(result).toContainText("rebuild could not be started");
+
+    // Promotion really happened: there is nothing left pending.
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("button", { name: "Nothing to publish" }),
+    ).toBeDisabled();
   });
 });

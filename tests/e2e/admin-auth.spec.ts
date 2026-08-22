@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { formAlert } from "./announcer";
+
 /**
  * Staff sign-in, on a cold first-time load — no cookies, no warm cache, which is how anyone
  * actually arrives at a sign-in page.
@@ -123,12 +125,15 @@ test.describe("the admin area is locked", () => {
     await page.getByLabel("Password").fill("not-the-password");
     await page.getByRole("button", { name: "Sign in" }).click();
 
+    const alert = formAlert(page);
     /*
-     * Scoped to the form: Next renders its own always-present `role="alert"` route
-     * announcer, so an unscoped lookup matches two elements and fails on strict mode.
+     * A longer wait than the default, because this one assertion sits behind a real network
+     * round trip: the server action calls Supabase's auth server, which is deliberate — a
+     * stubbed sign-in would prove nothing about the failure message a person actually sees.
+     * It flaked at 5 seconds on an otherwise green run, which is a slow dependency rather than
+     * a broken assertion, so the wait is widened instead of the test being weakened.
      */
-    const alert = page.locator("form").getByRole("alert");
-    await expect(alert).toBeVisible();
+    await expect(alert).toBeVisible({ timeout: 15_000 });
     /*
      * One message for every failure. Distinguishing "no such account" from "wrong password"
      * would make this form an oracle for which email addresses have accounts here — at a
