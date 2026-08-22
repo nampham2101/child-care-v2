@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { DayTimeline } from "@/components/site/DayTimeline";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getCenter } from "@/lib/center";
+import { getSpaceImages } from "@/lib/media";
 import { getProgramBands } from "@/lib/programs";
 
 /**
@@ -50,6 +52,14 @@ export default async function Programs({ params }: PageProps) {
   const tBands = await getTranslations("Programs");
   const center = await getCenter();
   const bands = await getProgramBands();
+  /*
+   * Photographs are optional, and that is the whole difference between this query and every
+   * other one on the page. A room with no picture yet is an ordinary state — v0.4.0 ships with
+   * an empty bucket and the first upload happens after the release — so this returns a map and
+   * the card below renders one only if it is there. `@/lib/media` explains why that does not
+   * weaken the "a missing fact fails the build" rule the other queries follow.
+   */
+  const photographs = await getSpaceImages();
 
   // Detail and staffing copy is per-band, so the message key is built from the band key
   // rather than written out three times. The keys used to be a checked literal union; they
@@ -99,6 +109,29 @@ export default async function Programs({ params }: PageProps) {
                 {tBands(band.key)}
               </h2>
               <p className="mt-1 text-sm text-ink-500">{band.ageLabel}</p>
+
+              {/*
+               * The room itself, when there is a photograph of it. Rendered between the ages
+               * and the description rather than above the heading, so a card with no picture
+               * reads as a complete card rather than as one with something missing — nothing
+               * reserves empty space for an image that may never arrive.
+               *
+               * `sizes` is what stops the CDN serving a 1200px file to a phone: the column is
+               * two thirds of a 768px-capped page on a wide screen, and the whole width below
+               * that. `priority` is deliberately absent — this sits below the fold, and the
+               * hero above it is what should win the connection.
+               */}
+              {photographs.get(band.key) ? (
+                <Image
+                  src={photographs.get(band.key)!.url}
+                  alt={photographs.get(band.key)!.alt}
+                  width={960}
+                  height={640}
+                  sizes="(min-width: 768px) 42rem, 100vw"
+                  className="mt-6 aspect-[3/2] w-full rounded-2xl border border-border object-cover"
+                />
+              ) : null}
+
               <p className="mt-4 text-ink-700">{bandCopy[band.key].detail}</p>
               <p className="mt-4 text-ink-700">{bandCopy[band.key].staffing}</p>
             </div>
