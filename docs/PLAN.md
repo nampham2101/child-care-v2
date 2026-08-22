@@ -347,8 +347,8 @@ enforce, and does: an account with no `profiles` row gets `NULL` from `current_o
 therefore matches nothing, so a stranger who did sign up would hold a session that can read and
 write exactly nothing. The setting is the front door; the missing profile row is the deadbolt.
 
-There is no `faq` or `about` table. With prose staying in the message catalogues — see below — those
-two pages have no facts to move.
+There is no `faq` or `about` table. Those two pages are almost entirely copy, and copy lives in
+`public.prose` (#76) rather than in a table of its own per page — so they have no facts to move.
 
 ### Drafts are twin rows (#74)
 
@@ -370,17 +370,21 @@ read and **failed the next build**, so editing the phone number would have broke
 integrity risk they carry — prevent the edit, or validate it against the message catalogue at save
 time — and the editor takes the first.
 
-Safety is only half the argument. Those columns join a database row to a namespace in
-`messages/en.json`, so a staff member renaming `infants` to `babies` would get a blank card on the
-public site and the key-coverage test would not notice until the next build. But the simpler reason
-is #74's own acceptance bar: *a staff member can complete the whole edit without being told a
-database column name.* A `key` **is** a column name, and validating one means showing it.
+Safety is only half the argument. Those columns join a database row to a namespace of copy, so a
+staff member renaming `infants` to `babies` would get a blank card on the public site and the
+key-coverage test would not notice until the next build. But the simpler reason is #74's own
+acceptance bar: *a staff member can complete the whole edit without being told a database column
+name.* A `key` **is** a column name, and validating one means showing it.
 
 **The consequence, stated because it is a real limit rather than an oversight: the editor changes
 existing content and cannot create it.** Adding a room or a staff member needs a new key *and* its
-copy in the catalogue, and the catalogue is not editable until #76 moves prose into the database.
-*Tripwire:* when #76 lands, revisit this — at that point a staff member could genuinely add a room,
-and the question becomes how a key is generated rather than whether it is typed.
+copy.
+
+*Tripwire, now live:* #76 moved copy into `public.prose`, so the second half of that sentence is no
+longer a blocker — a staff member could genuinely add a room once #77 exposes prose editing, and the
+open question becomes **how a key is generated rather than whether it is typed**. Note the failure
+mode changed with it: a renamed key used to render blank, and now fails the build, because
+`i18n/request.ts` throws on a missing message. Louder, and still not a reason to make keys editable.
 
 Two smaller decisions worth not re-deriving:
 
@@ -468,19 +472,61 @@ publish loop now rests on this repository instead of on a transitive dependency'
 the cache", this decision is the reason not to. `scripts/clear-fetch-cache.test.mjs` fails if the
 script or its hooks are removed.
 
-### Editable prose stays in `messages/*.json` for `v0.3.0`
+### Editable prose stayed in `messages/*.json` for `v0.3.0` — and moved in `v0.4.0`
 
-Only facts move to the database this release. Room names, staff bios, headings, FAQ answers, and
-every other piece of visible copy stay in the message catalogues, keyed by the `key` and `label_key`
-columns above.
+> **Settled by #76.** Prose is in the database. The `v0.3.0` reasoning is kept below because it is
+> still the reason the two releases were split this way, and because a reader who remembers the old
+> decision should be able to see what replaced it rather than find the section quietly rewritten.
 
-**The cost, stated plainly rather than discovered later:** when `v0.3.0` ships, center staff still
-cannot edit a single word of copy. Every fact on the site becomes editable and no sentence does.
-`/faq` and `/about`, which are almost entirely prose, gain nothing at all.
+Only facts moved to the database in `v0.3.0`. Room names, staff bios, headings, FAQ answers, and
+every other piece of visible copy stayed in the message catalogues, keyed by the `key` and
+`label_key` columns above.
 
-**The migration does not disappear — it moves.** `v0.4.0`'s admin UI needs a second migration to
-bring prose into the database, together with a decision about how translated copy is stored per
-locale. That work is deferred, not avoided, and `v0.4.0` should be estimated knowing it is there.
+**The cost, stated plainly rather than discovered later:** when `v0.3.0` shipped, center staff still
+could not edit a single word of copy. Every fact on the site became editable and no sentence did.
+`/faq` and `/about`, which are almost entirely prose, gained nothing at all.
+
+**The migration did not disappear — it moved**, and #76 is where it landed.
+
+#### What #76 decided
+
+**The shape: one row per `(locale, namespace, key)`** in `public.prose`. The catalogue is exactly
+two levels deep, so `namespace` and `key` are separate columns rather than one dotted string — the
+editor in #77 can then `order by namespace, key` instead of parsing.
+
+Two alternatives were rejected, and the reason is the same in both cases — publishing:
+
+- **A JSONB column keyed by locale** stores one row per string with `{"en": …, "de": …}`. Draft and
+  published are per row, so the whole multi-locale blob promotes as a unit and you could not ship an
+  English typo fix without also publishing a half-finished translation sitting beside it. The
+  draft/published twin makes that a real loss rather than a theoretical one.
+- **A separate translations table** is correct and buys nothing: the key table would carry no column
+  the join key does not already carry.
+
+One row per locale also degenerates well. With one shipped locale it is one row per string, exactly
+what a locale-less table would have been, so the locale column costs nothing now and is the thing
+that would be expensive to retrofit once the rows hold copy.
+
+**The read path merges, so no call site changed.** `i18n/request.ts` assembles the catalogue from
+the database and hands it to next-intl as `messages`. Every `t("FaqPage.answer")` still works, ICU
+interpolation still works for the 19 strings carrying placeholders, and the end-to-end suite passed
+unedited — which is what proves the copy did not move by accident.
+
+**The database is still not in a visitor's request path.** Every public route remains prerendered,
+so this runs at build time alongside the fact queries. The build output is the check: seven public
+routes marked `●` and only `/admin/*` marked `ƒ`.
+
+**Chrome stays in `messages/<locale>.json`** — three strings, all of them naming the interface
+rather than the center: the primary-nav aria-label and the open/close menu buttons. The test
+`tests/content/message-keys.test.ts` pins that list, so copy cannot drift back out of the database
+one string at a time.
+
+**A missing string now fails the build**, matching how a missing fact already behaves. Previously it
+rendered as a blank region, which reads as a CSS bug and sends whoever finds it looking in the wrong
+place.
+
+**The backfill was proven lossless by digest**, not by eye: 279 rows, md5
+`5c1835181bb32db57ea6381147f53257` on both the database and the pre-migration catalogue.
 
 Why that is the right trade: the two halves fail differently. A wrong ratio or a wrong monthly rate
 is a fact a parent acts on, and those are exactly the values that were duplicated across pages before

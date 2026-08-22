@@ -48,10 +48,19 @@ union all select 'staff', count(*) from public.staff
 union all select 'tuition_schedules', count(*) from public.tuition_schedules
 union all select 'tuition_rates', count(*) from public.tuition_rates
 union all select 'tuition_fees', count(*) from public.tuition_fees
+union all select 'prose', count(*) from public.prose
 order by 1;
 ```
 
-A fully seeded database has 1, 1, 3, 7, 7, 3, 9, and 1 rows respectively — 32 in total.
+A fully seeded database has 1 org, 1 site_settings, 3 programs, 7 daily_rhythm, 7 staff, 3
+tuition_schedules, 9 tuition_rates, and 1 tuition_fees — 32 facts in total — plus **279 `prose`
+rows**, one per English string, from #76's backfill.
+
+`prose` is counted here but is **not** part of `seed.sql`. It was populated once by
+`migrations/20260822020339_backfill_prose_from_en_catalogue.sql` and the database is the source of
+truth for copy from that point on; re-running the seed neither writes nor touches it. A `prose` count
+of 0 therefore means that migration has not been applied, not that the seed is partial — and the
+symptom is a build that fails in `@/lib/prose` naming the locale, rather than a page rendering blank.
 
 ## While `lib/` still holds the same values
 
