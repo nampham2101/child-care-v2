@@ -17,8 +17,10 @@ publish triggering a rebuild. Two things follow from that split, and both bite t
 
 - **No one can edit anything yet.** `v0.3.0` shipped a database with no editor — every fact is
   editable in principle and only through SQL in practice. That gap is the whole of `v0.4.0`.
-- **Prose is still in `messages/*.json`**, all 282 strings of it. Moving it is a `v0.4.0` migration,
-  not a thing that already happened.
+- **Prose has moved into the database** (#76). 279 of the 282 strings are rows in `public.prose`,
+  one per `(locale, namespace, key)`; `messages/<locale>.json` now holds only three chrome strings.
+  Copy is still not *editable* — that is #77 — but it is no longer in the catalogues, so do not send
+  anyone to `messages/en.json` to change a sentence.
 
 Merged is not shipped — only a published release reaches production.
 

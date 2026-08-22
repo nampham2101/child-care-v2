@@ -161,6 +161,50 @@ export type Database = {
           },
         ]
       }
+      prose: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          locale: string
+          namespace: string
+          org_id: string
+          status: Database["public"]["Enums"]["content_status"]
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          locale: string
+          namespace: string
+          org_id: string
+          status?: Database["public"]["Enums"]["content_status"]
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          locale?: string
+          namespace?: string
+          org_id?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prose_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_settings: {
         Row: {
           address_line1: string

@@ -126,6 +126,13 @@ npx supabase migration list
 Take the version the connector recorded, and rename the local file to match it. `#72` did
 this by hand for `20260813023202_create_profiles.sql`.
 
+`#76` did the same for its three — `20260822020022_create_prose.sql`,
+`20260822020112_publish_org_drafts_covers_prose.sql`, and
+`20260822020339_backfill_prose_from_en_catalogue.sql`. Worth knowing if you copy that pattern: the
+backfill's filename is also hard-coded in `scripts/generate-prose-backfill.mjs`, so renaming the file
+alone would have left the generator writing to a path that no longer exists. Grep for the old
+timestamp before assuming a rename is just a rename.
+
 ### Regenerating types without a personal access token
 
 `gen types` needs `SUPABASE_ACCESS_TOKEN`, which has never been present on this machine. The
