@@ -1,5 +1,5 @@
 /**
- * Every key in the database has a matching message in every catalogue.
+ * Every key in the database has a matching message in the catalogue every locale assembles.
  *
  * This is the guarantee the compiler used to make and cannot any more. `PROGRAM_BANDS`,
  * `STAFF`, and `SCHEDULES` were `as const` arrays, so their keys were literal union types and
@@ -8,37 +8,46 @@
  *
  * **That failure is quiet and it looks like something else.** A band with no message reaches a
  * Deploy Preview as a blank heading — which reads as a CSS bug, or as a page that half-loaded,
- * and sends whoever finds it looking in the wrong place entirely. So it is asserted here
- * instead, against both halves of the join for real: the live rows on one side, the shipped
- * catalogues on the other.
+ * and sends whoever finds it looking in the wrong place entirely.
  *
- * It runs over **every** file in `messages/`, not just `en.json`. There is one locale today;
- * the German and Italian catalogues are already ticketed, and a translation that forgets a
- * staff bio should fail here rather than shipping a nameless person to that locale's visitors.
+ * ## What #76 changed here
+ *
+ * Both halves of this join used to be different kinds of thing: rows on one side, the shipped
+ * `messages/*.json` files on the other. The copy moved into the database, so the join is now
+ * row-to-row — and the catalogue this asserts against is **assembled the way the site
+ * assembles it**, through `getProse` and `mergeCatalogues`, rather than by reading a file.
+ * That is strictly better: it now also proves the merge itself, which is the step that could
+ * drop a namespace.
+ *
+ * It iterates `routing.locales` rather than the contents of `messages/`, because that list is
+ * what the site actually builds pages for. A locale with no rows fails in `getProse`, naming
+ * the locale — which is the correct outcome for adding `"de"` to the routing before the German
+ * rows exist.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import { routing } from "@/i18n/routing";
+import { getProse, mergeCatalogues, type Messages } from "@/lib/prose";
 import { getDailyRhythm, getProgramBands } from "@/lib/programs";
 import { getStaff } from "@/lib/staff";
 import { getSchedules } from "@/lib/tuition";
 
 const MESSAGES_DIR = path.resolve(import.meta.dirname, "../../messages");
 
-type Catalogue = Record<string, Record<string, unknown>>;
+/** The same two halves `i18n/request.ts` puts together, assembled the same way. */
+async function catalogueFor(locale: string): Promise<Messages> {
+  const chrome = JSON.parse(
+    readFileSync(path.join(MESSAGES_DIR, `${locale}.json`), "utf8"),
+  ) as Messages;
+  return mergeCatalogues(await getProse(locale), chrome);
+}
 
-const catalogues = readdirSync(MESSAGES_DIR)
-  .filter((file) => file.endsWith(".json"))
-  .map((file) => ({
-    locale: path.basename(file, ".json"),
-    messages: JSON.parse(
-      readFileSync(path.join(MESSAGES_DIR, file), "utf8"),
-    ) as Catalogue,
-  }));
+const catalogues = routing.locales.map((locale) => ({ locale }));
 
-test("there is at least one catalogue to check against", () => {
+test("there is at least one locale to check", () => {
   // Otherwise every assertion below would iterate an empty list and pass, which is the one
   // way this whole file could go green while proving nothing.
   expect(catalogues.length).toBeGreaterThan(0);
@@ -79,7 +88,8 @@ const JOINS = [
 ] as const;
 
 describe.each(JOINS)("every $what key has copy", ({ keys, expected }) => {
-  test.each(catalogues)("in $locale", async ({ messages }) => {
+  test.each(catalogues)("in $locale", async ({ locale }) => {
+    const messages = await catalogueFor(locale);
     const rowKeys = await keys();
 
     // A query that returned nothing would make every loop below vacuous.
@@ -92,6 +102,8 @@ describe.each(JOINS)("every $what key has copy", ({ keys, expected }) => {
           const messageKey = `${key}${suffix}`;
           const value = messages[namespace]?.[messageKey];
           // An empty string is as blank on the page as a missing key, so it fails too.
+          // The prose table rejects blanks with a check constraint; this still catches one
+          // arriving from the chrome file.
           if (typeof value !== "string" || value.trim() === "") {
             missing.push(`${namespace}.${messageKey}`);
           }
@@ -116,7 +128,8 @@ describe.each(JOINS)("every $what key has copy", ({ keys, expected }) => {
  * simply not true of them and asserting it would be noise.
  */
 describe("copy that no database row renders", () => {
-  test.each(catalogues)("in $locale", async ({ messages }) => {
+  test.each(catalogues)("in $locale", async ({ locale }) => {
+    const messages = await catalogueFor(locale);
     const bandKeys = (await getProgramBands()).map((band) => band.key);
     const rhythmKeys = (await getDailyRhythm()).map((slot) => slot.labelKey);
 
@@ -126,5 +139,30 @@ describe("copy that no database row renders", () => {
     expect(Object.keys(messages.Day ?? {}).sort()).toEqual(
       [...rhythmKeys].sort(),
     );
+  });
+});
+
+/**
+ * The chrome file holds chrome and nothing else.
+ *
+ * Without this, the backfill's boundary decays: the next person adding a string picks the
+ * file because editing JSON is easier than writing a row, and the copy drifts back out of the
+ * database one string at a time until the editor is missing things again for no stated reason.
+ *
+ * The list is duplicated from `scripts/generate-prose-backfill.mjs` on purpose. That script is
+ * a one-shot tool; this is the standing assertion, and it should fail if someone edits the
+ * catalogue without touching the generator.
+ */
+describe("the catalogue file holds only chrome", () => {
+  test.each(catalogues)("in $locale", ({ locale }) => {
+    const chrome = JSON.parse(
+      readFileSync(path.join(MESSAGES_DIR, `${locale}.json`), "utf8"),
+    ) as Messages;
+
+    const keys = Object.entries(chrome).flatMap(([namespace, entries]) =>
+      Object.keys(entries).map((key) => `${namespace}.${key}`),
+    );
+
+    expect(keys.sort()).toEqual(["Nav.closeMenu", "Nav.label", "Nav.openMenu"]);
   });
 });
