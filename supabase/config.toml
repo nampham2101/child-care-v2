@@ -1,0 +1,95 @@
+# Configuration for the Supabase CLI's local stack.
+#
+# ---------------------------------------------------------------------------------------
+# WHO THIS IS FOR — read this before assuming the project gained a local database
+# ---------------------------------------------------------------------------------------
+#
+# **This file exists for CI, not for the development machine.** `migrations/README.md` explains
+# at length that there is no local database here: Docker is not installed on the machine this
+# project is developed on, so `supabase start`, `db reset` and `db diff` are unavailable there
+# and migrations are hand-written and applied against the hosted project.
+#
+# None of that changed. What changed is that the constraint was always about **one machine**,
+# and #98 needed a throwaway database in **GitHub Actions**, where Docker is present and free.
+# So the stack described here is started by `.github/workflows/ci.yml` and nowhere else.
+#
+# A generated `supabase init` file is ~400 lines, almost all of it commented defaults for
+# features this project does not use. This is the trimmed version: what is set is what matters,
+# and everything absent is the CLI's default.
+#
+# ---------------------------------------------------------------------------------------
+# WHAT IS TURNED OFF, AND WHY IT IS SAFE TO
+# ---------------------------------------------------------------------------------------
+#
+# Every service below that is disabled is one fewer container to pull and start on a job that
+# exists to run two SQL files. The ones left on are the ones the migrations actually need:
+#
+#   * `auth` — `profiles.id` references `auth.users`, and `current_org_id()` reads `auth.uid()`.
+#   * `storage` — the media migration writes a bucket into `storage.buckets` and policies onto
+#     `storage.objects`, and uses `storage.foldername()`. Without this the migrations do not
+#     apply, which is precisely the fidelity a hand-written stub would not have given us.
+#   * `db` — the point of the exercise.
+#
+# `studio`, `realtime`, `analytics`, `edge_runtime`, the connection pooler and the local SMTP
+# server are not reachable from a `psql` script and are off.
+
+project_id = "child-care-v2"
+
+[db]
+port = 54322
+shadow_port = 54320
+# Matches the hosted project, which reports 17.x. A check that ran on a different major could
+# disagree with production about exactly the index and ON CONFLICT semantics #93 turned on.
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+# `supabase db reset` applies this after the migrations, which is the seed's FIRST application.
+# The re-run check in `checks/reseed-is-idempotent.sql` applies it again and diffs — the second
+# application is the one that has been broken before.
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+# Needed because `profiles.id` references `auth.users` and `current_org_id()` reads `auth.uid()`.
+# Nobody signs in: the check inserts the fixture account row directly, with no password, purely so
+# the fixture's profile insert has something to join to.
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[storage.analytics]
+enabled = false
+
+[storage.vector]
+enabled = false
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[local_smtp]
+enabled = false

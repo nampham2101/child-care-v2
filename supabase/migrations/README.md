@@ -4,7 +4,7 @@ SQL files, applied in filename order, forward only. This directory is the truth 
 schema — `docs/PLAN.md` deliberately does not repeat column lists, because a document and a
 migration that describe the same table will drift and only one of them actually runs.
 
-## There is no local database
+## There is no local database on the development machine
 
 **Docker is not installed on the development machine, so `supabase start` is unavailable** —
 and with it `supabase db diff`, `supabase db reset`, and every other command that compares
@@ -15,9 +15,26 @@ The practical consequence: **migrations are hand-written, not generated.** There
 schema to diff against, so nobody can make a change in a GUI and have the SQL produced for
 them. Write the SQL, review it, apply it.
 
-If a future ticket assumes a local database — a `db diff` step, a seeded test container, a
-`db reset` in CI — that assumption is wrong here. Raise it rather than installing Docker to
-satisfy it.
+If a future ticket assumes a local database on **this machine** — a `db diff` step, a generated
+migration, a `db reset` before pushing — that assumption is wrong. Raise it rather than
+installing Docker to satisfy it.
+
+### CI is the exception, and it is a deliberate one (#98)
+
+This section used to name "a `db reset` in CI" among the wrong assumptions. That was too broad,
+and #98 is where it was corrected: the constraint was always about **one machine**, not about the
+technique. A GitHub runner has Docker already and charges nothing for it on a public repository,
+so nobody is asked to install anything.
+
+So `supabase/config.toml` exists, and the `seed` job in `.github/workflows/ci.yml` starts a real
+local stack — Postgres, Auth and Storage, with everything else switched off — runs `db reset`
+against it, and then re-applies `seed.sql` and `fixtures/rls.sql` to prove they still can be. It
+uses no credential of any kind and the database dies with the job.
+
+**That is the only local database in this project.** It does not change how migrations are
+written or applied here: still by hand, still through the management connector, still against the
+one hosted project. If you find yourself wanting `db diff` locally, you are back in the paragraph
+above.
 
 ## Creating a migration
 

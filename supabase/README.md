@@ -6,10 +6,15 @@ Two things live here, and they are applied differently because they are differen
 |---|---|---|
 | `migrations/*.sql` | Schema. See [`migrations/README.md`](migrations/README.md) | Once, forward only |
 | `seed.sql` | The fictional center's facts | Whenever the seeded values change |
+| `fixtures/rls.sql` | Rows the row-level security suite needs refused | Whenever the fixture changes |
+| `checks/reseed-is-idempotent.sql` | Proves the two above can still be re-applied (#98) | Every CI run |
+| `config.toml` | The local stack that check runs against | Only in CI |
 
-There is **one hosted project and no local database** — Docker is not installed, so `supabase start`
-and everything built on it is unavailable. `migrations/README.md` explains that constraint in full;
-it applies to this file too.
+There is **one hosted project, and no local database on the development machine** — Docker is not
+installed there, so `supabase start` and everything built on it is unavailable.
+`migrations/README.md` explains that constraint in full and explains its one exception: the `seed`
+job in CI, which starts a throwaway stack purely to re-apply the two files above. Nothing in that
+job touches the hosted project, and it holds no credential.
 
 ---
 
@@ -26,10 +31,11 @@ environment file. Nothing in the site writes to the database, so there is no sec
 introduce one. A seed that runs a few times a release does not earn the standing risk of a
 write-capable key sitting in `.env.local`.
 
-**It is safe to run more than once.** Every statement upserts on the natural key, so a second run
-updates the same rows in place rather than inserting duplicates — re-verified for #93 by running the
-whole file twice against the live project inside a transaction and diffing every row before and
-after. Row identifiers and every content value were unchanged.
+**It is safe to run more than once**, and since #98 that is a claim CI re-proves rather than one
+this file asserts. Every statement upserts on the natural key, so a second run updates the same
+rows in place rather than inserting duplicates. The `seed` job applies this file — the committed
+file, not a copy — twice more against a throwaway stack on every run and fails if any row
+identifier or content value moved. `checks/reseed-is-idempotent.sql` is what it runs and why.
 
 One correction to the older version of that claim, which said "byte-for-byte unchanged": `updated_at`
 does move. Each content table has a `BEFORE UPDATE` trigger, and an upsert that writes the same value
@@ -45,7 +51,9 @@ without discarding an edit somebody has in flight. Verified with a draft twin pr
 That predicate is load-bearing, not decoration. Without it Postgres cannot tell which of the two
 partial indexes is meant and refuses to plan the statement — `42P10`, raised at plan time, so the
 whole file fails rather than one row. If a future migration changes a unique index here, this file
-and `fixtures/rls.sql` have to change with it; nothing in CI will catch it.
+and `fixtures/rls.sql` have to change with it — and **the `seed` job is what will tell you**, on
+the pull request that changes the index rather than weeks later. That sentence used to end "nothing
+in CI will catch it", which was true when it was written and is the gap #98 closed.
 
 **It never deletes.** Removing a program band from the file leaves its row in the database. A seed
 that deleted whatever it did not recognise would be one careless edit away from destroying rows the
