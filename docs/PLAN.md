@@ -773,6 +773,40 @@ the account belongs to the fixture organization rather than to the live center: 
 everything its organization owns, so this credential's blast radius is deliberately two rows whose
 text reads "FIXTURE — must never be visible".
 
+### The recovery scripts are verified against a throwaway database (#98)
+
+`seed.sql` and `fixtures/rls.sql` are applied by hand and ran in no test. #93 found both had been
+unapplicable since #86 — several weeks — because the twin-rows migration replaced each unique
+constraint with two partial unique indexes and `on conflict (cols)` could no longer name one.
+Nothing reported it. The person most likely to find out is someone restoring a broken database.
+
+A `seed` job now applies both files to a **local Supabase stack started inside the CI job**, twice
+more after `db reset`, and fails if a row identifier or content value moved or if a planted draft
+did not survive.
+
+**The decision that needed making was where CI gets a database**, since it has no write-capable
+credential and `docs/CONVENTIONS.md` deliberately keeps the service-role key out of every
+environment. Three options were costed on #98; the owner chose the local stack. The reasoning:
+
+- A **scratch Supabase project** or a **Supabase branch per run** were both rejected as
+  unnecessary rather than as too expensive. Once the database is throwaway, no credential is
+  needed at all — and a branch bills by the hour for something that runs on every pull request.
+- A **plain Postgres service container** would have been faster, but the migrations reference
+  `auth.users`, `auth.uid()`, `storage.buckets`, `storage.objects` and `storage.foldername()`. It
+  would have needed a hand-written shim of all of that, and a shim is a reconstruction that drifts
+  from the thing it stands in for.
+- The **local stack** runs the real Auth and Storage schemas, so the migrations apply exactly as
+  they do in production. It costs image pulls on a runner, which are free on a public repository.
+
+**This does not reverse "there is no local database".** That constraint is about the development
+machine, which has no Docker; `supabase/migrations/README.md` now says so precisely. Migrations are
+still hand-written and still applied through the management connector against the one hosted
+project.
+
+**The tripwire that should make us revisit:** if the `seed` job starts being the reason CI is slow,
+or if keeping `config.toml` in step with the hosted project becomes its own maintenance task, the
+Postgres-container option is the fallback and the shim is the price.
+
 **Per milestone:**
 - `v0.1.0` — merging main leaves production untouched; publishing the release deploys it; rollback
   by republishing the previous deploy works. **Rollback is tested before it is needed.**

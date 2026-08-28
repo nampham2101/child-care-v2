@@ -116,3 +116,63 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_TEST_PASSWORD: ${{ secrets.SUPABASE_TEST_PASSWORD }}
+
+  # ---------------------------------------------------------------------------------------
+  # Can the recovery scripts still be run?
+  # ---------------------------------------------------------------------------------------
+  #
+  # `seed.sql` and `fixtures/rls.sql` are applied by hand, and until #93 they had been
+  # unapplicable for several weeks with nothing reporting it: the twin-rows migration replaced
+  # each unique constraint with two partial unique indexes, and `on conflict (cols)` could no
+  # longer name one of them. Postgres refuses to plan such a statement, so the whole file
+  # failed. The person most likely to discover that is someone restoring a broken database.
+  #
+  # #98 is this job. It is deliberately a SEPARATE job from `verify` above, for two reasons:
+  # it needs a database of its own rather than the hosted project, and a red result here means
+  # "the recovery path is broken", which is a different sentence from "the site is broken".
+  #
+  # THIS IS THE ONE PLACE THE PROJECT USES A LOCAL DATABASE, and it is not a reversal of the
+  # constraint in supabase/migrations/README.md. That constraint is about the development
+  # machine, which has no Docker; a GitHub runner has Docker already and charges nothing for
+  # it on a public repository. Nothing here asks anyone to install anything locally.
+  #
+  # No credential of any kind: no service-role key, no project URL, no secret. The database is
+  # created and destroyed inside this job. That is what makes the job cheap to reason about —
+  # the worst it can do is fail.
+  seed:
+    name: Seed and fixtures can be re-applied
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # For the Supabase CLI, which is a devDependency pinned exactly in package.json rather
+      # than a separately versioned action — so the CLI that runs here is the CLI the lockfile
+      # names, and it moves when the lockfile does.
+      - run: npm ci
+
+      # Pulls and starts Postgres, Auth and Storage; everything else is switched off in
+      # supabase/config.toml. `start` applies the migrations and the seed on a fresh stack.
+      - run: npx supabase start
+
+      # Then does it again, deliberately and explicitly: `db reset` drops the database, replays
+      # every migration in filename order, and applies seed.sql. That is the seed's FIRST
+      # application, and the state the check below measures from.
+      - run: npx supabase db reset
+
+      # Applications two and three, plus the fixture applied twice, plus the assertions. The
+      # script includes the committed files with `\ir` rather than a copy — a check that ran a
+      # rewritten copy would be testing the rewrite.
+      #
+      # The connection string is the local stack's fixed one; the port is pinned in
+      # supabase/config.toml. ON_ERROR_STOP so a 42P10 or a 23505 fails the job rather than
+      # scrolling past as one red line among the notices.
+      - name: Re-apply seed.sql and fixtures/rls.sql, and diff
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/checks/reseed-is-idempotent.sql
