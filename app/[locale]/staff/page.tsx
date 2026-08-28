@@ -29,8 +29,8 @@ import { averageTenure, getStaff, yearsWith } from "@/lib/staff";
 type PageProps = { params: Promise<{ locale: string }> };
 
 // Stated as three positions on turnover, because the honest version of "our staff are
-// wonderful" is what a center actually does to keep them. Keys name the strings in
-// `messages/en.json` rather than repeating the block markup three times.
+// wonderful" is what a center actually does to keep them. Keys name strings in the catalogue —
+// `public.prose` rows since #76 — rather than repeating the block markup three times.
 const STAY_KEYS = ["Pay", "Room", "Hiring"] as const;
 
 export async function generateMetadata({

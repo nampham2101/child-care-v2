@@ -6,10 +6,11 @@
  * center where nobody knows your child — so it must not say twelve years on one page and
  * eleven on the other.
  *
- * Only facts live here. Roles and bios are prose and live in `messages/en.json` under the
- * `Staff` namespace, keyed by `key`, the same split `@/lib/programs` uses. A staff row whose
- * key has no matching message renders a card with no role; `tests/content/` is what catches
- * that now the compiler cannot.
+ * Only facts live here. Roles and bios are prose and live under the `Staff` namespace of the
+ * message catalogue, keyed by `key`, the same split `@/lib/programs` uses — and since #76 that
+ * catalogue is `public.prose`, read at build time by `@/lib/prose`, not `messages/en.json`. A
+ * role is changed by staff at `/admin/copy`. A staff row whose key has no matching message
+ * renders a card with no role; `tests/content/` is what catches that now the compiler cannot.
  *
  * The derived helpers below are **pure functions over rows they are given**, deliberately.
  * They are the logic worth testing apart from the page rendering it, and they stay testable
@@ -20,7 +21,7 @@ import { cache } from "react";
 import { CENTER_ORG_SLUG, requireRows } from "@/lib/content";
 
 export type StaffMember = {
-  /** Joins to the `Staff` namespace in `messages/en.json` — `${key}Role`, `${key}Bio`. */
+  /** Joins to the `Staff` namespace of the catalogue — `${key}Role`, `${key}Bio`, in `prose`. */
   key: string;
   name: string;
   /**

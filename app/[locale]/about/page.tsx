@@ -26,8 +26,8 @@ import { getProgramBands } from "@/lib/programs";
 type PageProps = { params: Promise<{ locale: string }> };
 
 // The three beliefs, in the order a parent's worry arrives: who holds my child, what
-// their day is like, and whether I will be told the truth about it. Keys name the strings
-// in `messages/en.json` rather than repeating the block markup three times.
+// their day is like, and whether I will be told the truth about it. Keys name strings in the
+// catalogue — `public.prose` rows since #76 — rather than repeating the block markup three times.
 const PHILOSOPHY_KEYS = ["Known", "Rhythm", "Plain"] as const;
 
 // What a state inspector actually looks at, beside the prose that claims a license is an

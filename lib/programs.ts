@@ -8,8 +8,13 @@
  * `@/lib/center` owns the license number.
  *
  * Only facts live here. The visible prose — band names, the label on each clock time — lives
- * in `messages/en.json` under the `Programs` and `Day` namespaces, keyed by the `key` and
+ * under the `Programs` and `Day` namespaces of the message catalogue, keyed by the `key` and
  * `labelKey` fields below, so the copy is translatable while the numbers stay a fact.
+ *
+ * **That catalogue is the database, not a JSON file** (#76). `@/lib/prose` reads `public.prose`
+ * at build time and hands it to next-intl, so a `t("Programs.infants")` call site is unchanged
+ * — but a band name is edited by staff at `/admin/copy`, and editing `messages/en.json` would
+ * change nothing. That file holds three chrome strings and none of this.
  *
  * **That join is now unchecked by the compiler.** These keys used to be a literal union from
  * `as const`, so a band with no matching message was a type error. They come from the
@@ -21,7 +26,7 @@ import { cache } from "react";
 import { CENTER_ORG_SLUG, requireRows } from "@/lib/content";
 
 export type ProgramBand = {
-  /** Joins to the `Programs` namespace in `messages/en.json`. */
+  /** Joins to the `Programs` namespace of the catalogue — a `public.prose` row since #76. */
   key: string;
   ageLabel: string;
   ratio: string;
@@ -29,7 +34,7 @@ export type ProgramBand = {
 };
 
 export type DailyRhythmSlot = {
-  /** Joins to the `Day` namespace in `messages/en.json`. */
+  /** Joins to the `Day` namespace of the catalogue — a `public.prose` row since #76. */
   labelKey: string;
   time: string;
 };
