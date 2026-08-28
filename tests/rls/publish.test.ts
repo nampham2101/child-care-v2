@@ -81,6 +81,27 @@ async function cleanUp() {
   }
   await member.from("tuition_schedules").delete().eq("key", SCHEDULE_KEY);
   await member.from("programs").delete().in("key", [TWIN_KEY, NEW_KEY]);
+
+  /*
+   * The fixture's permanently-draft row, put back.
+   *
+   * Every `publish_org_drafts()` call here promotes **everything pending in the organization**,
+   * including `rlsFixtureDraft` — a row this suite did not create and
+   * `tests/rls/authenticated.test.ts` asserts is a draft.
+   *
+   * That was survivable only because of file ordering: Vitest runs test files largest-first, and
+   * `authenticated.test.ts` used to be bigger than this one, so it asserted before this suite ran.
+   * Adding the every-table sweep below made this file the largest, it ran first, and
+   * `authenticated.test.ts` failed on a row nowhere near what it was testing.
+   *
+   * `tests/e2e/admin-editor.spec.ts` has a restore for the same reason, but it is a different
+   * command in a later step — no use to a `test:db` run that fails before reaching it. So the
+   * suite that breaks the row is the suite that repairs it, and the ordering stops mattering.
+   */
+  await member
+    .from("programs")
+    .update({ status: "draft" })
+    .eq("key", "rlsFixtureDraft");
 }
 
 beforeAll(async () => {
