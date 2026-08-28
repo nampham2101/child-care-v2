@@ -34,23 +34,31 @@ So pressing Publish dispatches
 [`.github/workflows/publish-content.yml`](../.github/workflows/publish-content.yml), which:
 
 1. Looks up the newest **published release tag**.
-2. Checks out that tag — *not* `main`.
-3. Runs the same `netlify deploy --build --prod` the release workflow runs.
+2. Confirms that release **actually deployed to production** — a `Release` run for that tag that
+   concluded successfully. If it never did, the publish refuses and production is untouched.
+3. Checks out that tag — *not* `main`.
+4. Runs the same `netlify deploy --build --prod` the release workflow runs.
 
 **The property this preserves: a content publish can never ship unreleased code.** Both production
 gates survive — the owner still decides what code goes live by cutting a release, and staff decide
 what content goes live by pressing Publish. It shares `release.yml`'s concurrency group, so a
 release and a content publish queue rather than race.
 
-It skips the CI gate deliberately: that exact commit was gated when it was released, and staff
-cannot make content structurally invalid because keys are not editable (#74). The build is still a
-real check — `lib/content.ts` raises on a missing published row and `lib/tuition.ts` on an
+It skips the CI gate deliberately: that exact commit was gated when it was released — step 2 is
+what makes that true rather than assumed, after v0.4.0 was published with a gate that had failed
+(#103) — and staff cannot make content structurally invalid because keys are not editable (#74).
+The build is still a real check — `lib/content.ts` raises on a missing published row and `lib/tuition.ts` on an
 incomplete rate sheet, so a bad publish fails the build and leaves production untouched.
 
 **If a publish reports that the rebuild could not be started**, the edits are safe: they are already
 published in the database, and the next successful build renders them. Check that
 `GITHUB_PUBLISH_TOKEN` is set and unexpired in Netlify, then either press Publish again after any
 edit, or cut a release.
+
+**If a publish fails with "has never deployed to production successfully"**, the newest release was
+published but its deploy did not finish — so there is no gated code to build. The edits are safe,
+for the same reason as above. Fix the release (land the fix, cut a new patch release), and the
+content goes live with it; no second Publish is needed.
 
 ### One-time prerequisites (owner)
 

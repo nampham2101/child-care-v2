@@ -30,6 +30,10 @@ name: Publish content
 #
 # The consequence to hold on to: **a content publish can never ship unreleased code.** If that
 # ever changes, the second of the two production gates is gone.
+#
+# "Released" means released AND deployed. Those came apart once already (#103), so the job checks
+# for a successful production deploy of the tag rather than trusting that a published release
+# implies one — see the step that does it.
 
 on:
   workflow_dispatch:
@@ -44,6 +48,9 @@ concurrency:
 
 permissions:
   contents: read
+  # For the deploy check below, which reads this repository's workflow run history to find out
+  # whether the release it is about to build ever actually reached production.
+  actions: read
 
 jobs:
   deploy:
@@ -69,6 +76,59 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Rebuilding production from $tag"
 
+      # ---------------------------------------------------------------------------------------
+      # DID THAT RELEASE EVER REACH PRODUCTION?
+      # ---------------------------------------------------------------------------------------
+      #
+      # The step below skips the CI gate on the premise that the tag it builds was gated when it
+      # was released. #103 proved the premise can be false: v0.4.0's release gate FAILED, its
+      # deploy job was skipped, and production stayed on v0.3.0 — while `gh release view` went on
+      # returning `v0.4.0` as the newest release, because publishing a release and deploying one
+      # are two different events and only the first had happened.
+      #
+      # So for the length of that window, pressing Publish in the admin would have taken
+      # production from v0.3.0 straight to ungated v0.4.0 code, through the one path built on the
+      # assumption that could not happen. This step is what makes the premise true rather than
+      # assumed.
+      #
+      # A `release: published` run records the tag as its head branch, so the tag is enough to
+      # find it. The whole workflow's conclusion is what is checked, not the deploy job's, because
+      # `deploy` needs `verify` and runs last: the workflow concludes `success` only if the gate
+      # passed AND `--prod` published. That is exactly the question being asked.
+      #
+      # It asks for ANY successful run of that tag rather than the newest one. The question is
+      # "did this code ever ship", and a re-run someone fired afterwards out of curiosity does not
+      # un-ship it.
+      #
+      # WHAT THIS DELIBERATELY DOES NOT DO: fall back to the newest release that did deploy.
+      # Quietly building v0.3.0 when the operator believes they are publishing against v0.4.0 is a
+      # worse failure than refusing — it would put stale code live and report success. Refusing
+      # leaves production untouched, which is the safe direction, and the message says who can fix
+      # it. Content is not lost by refusing; it stays published in the database and goes live on
+      # the next successful publish.
+      - name: Refuse a release that never deployed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          deployed=$(gh run list \
+            --workflow=Release \
+            --branch "$TAG" \
+            --event release \
+            --json status,conclusion \
+            --jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length')
+
+          if [ "$deployed" -eq 0 ]; then
+            echo "::error::Release $TAG has never deployed to production successfully, so the" \
+                 "code this publish would build was never gated. Refusing, and production is" \
+                 "untouched. Fix the release first: land the fix and cut a new patch release," \
+                 "then publish again. Your content stays published in the database and goes" \
+                 "live with that release."
+            exit 1
+          fi
+
+          echo "Release $TAG deployed successfully — its gate was real. Continuing."
+
       # Swap to the released code. Everything after this point builds the tag, not main.
       - uses: actions/checkout@v7
         with:
@@ -82,7 +142,9 @@ jobs:
       - run: npm ci
 
       # No CI gate here, and that is deliberate rather than an omission. This exact commit was
-      # gated when it was released, and the only thing that has changed since is database
+      # gated when it was released — which the step above now VERIFIES rather than assumes, after
+      # #103 showed a published release whose gate had failed — and the only thing that has
+      # changed since is database
       # content that staff cannot make structurally invalid — keys are not editable (#74), so
       # the message-catalogue join cannot break from this direction. The build below is still a
       # real gate on the content: `lib/content.ts` raises on a missing published row and
