@@ -239,7 +239,7 @@ cross join (values
   ('twoDay',   'preschool', 790)
 ) as v(schedule_key, program_key, per_month)
 join public.tuition_schedules s
-  on s.org_id = o.id and s.key = v.schedule_key and s.status = 'published'
+  on s.org_id = o.id and s.key = v.schedule_key
 join public.programs p
   on p.org_id = o.id and p.key = v.program_key and p.status = 'published'
 where o.slug = 'willow-grove'
