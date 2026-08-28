@@ -26,9 +26,26 @@ environment file. Nothing in the site writes to the database, so there is no sec
 introduce one. A seed that runs a few times a release does not earn the standing risk of a
 write-capable key sitting in `.env.local`.
 
-**It is safe to run more than once.** Every statement upserts on the natural key the schema already
-enforces, so a second run updates the same rows in place rather than inserting duplicates — verified
-by re-running it and confirming the row identifiers and values were byte-for-byte unchanged.
+**It is safe to run more than once.** Every statement upserts on the natural key, so a second run
+updates the same rows in place rather than inserting duplicates — re-verified for #93 by running the
+whole file twice against the live project inside a transaction and diffing every row before and
+after. Row identifiers and every content value were unchanged.
+
+One correction to the older version of that claim, which said "byte-for-byte unchanged": `updated_at`
+does move. Each content table has a `BEFORE UPDATE` trigger, and an upsert that writes the same value
+is still an update, so re-seeding restamps every row it touches. Nothing reads that column today, but
+do not use it to tell a seeded row from an edited one.
+
+**A re-seed leaves drafts alone.** Every `on conflict` in the file names the *published* partial
+unique index (`where status = 'published'`), which is what makes the statements plan at all under the
+twin-rows schema — and the useful consequence is that a staff member's unpublished draft is not a
+conflict target and is not touched. Re-seeding puts the live site back to the values in this file
+without discarding an edit somebody has in flight. Verified with a draft twin present.
+
+That predicate is load-bearing, not decoration. Without it Postgres cannot tell which of the two
+partial indexes is meant and refuses to plan the statement — `42P10`, raised at plan time, so the
+whole file fails rather than one row. If a future migration changes a unique index here, this file
+and `fixtures/rls.sql` have to change with it; nothing in CI will catch it.
 
 **It never deletes.** Removing a program band from the file leaves its row in the database. A seed
 that deleted whatever it did not recognise would be one careless edit away from destroying rows the
@@ -62,10 +79,14 @@ truth for copy from that point on; re-running the seed neither writes nor touche
 of 0 therefore means that migration has not been applied, not that the seed is partial — and the
 symptom is a build that fails in `@/lib/prose` naming the locale, rather than a page rendering blank.
 
-## While `lib/` still holds the same values
+## `lib/` no longer holds these values
 
-Until the read-path work lands, every fact exists twice: in `lib/` and in these tables. **`lib/` is
-still the source the site renders**, so a value changed in only one of the two places is a
-divergence nothing currently detects.
+This section used to warn that every fact existed twice — once in `lib/`, once in these tables — and
+that `lib/` was the source the site rendered. That stopped being true in `v0.3.0`. `lib/center.ts`,
+`lib/programs.ts`, `lib/staff.ts` and `lib/tuition.ts` now read these tables at build time and hold
+no constants, so **the database is the only source** and there is no second copy to keep in step.
 
-Change both, in the same pull request, until `lib/` stops holding constants at all.
+What that changes for this file: editing a value here and applying it is the whole job. What it does
+not change: `seed.sql` is still the transcription of record for the fictional center's facts, so a
+value changed through the admin UI and not reflected here will be silently reverted the next time
+somebody re-seeds. Keep them in agreement.
