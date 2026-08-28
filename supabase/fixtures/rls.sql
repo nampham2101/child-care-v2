@@ -6,7 +6,9 @@
 -- to be denied.
 --
 -- Applied the same way as supabase/seed.sql — pasted into the dashboard SQL editor. Safe to
--- re-run; every statement upserts on (org_id, key).
+-- re-run; every statement upserts on the natural key, naming the partial unique index it
+-- means with `where status = …` so Postgres can plan it. See #93 and the note above the
+-- programs rows for why that predicate is not optional.
 --
 -- ---------------------------------------------------------------------------------------
 -- WHY A SECOND ORGANIZATION, GIVEN ANON IS NOT SCOPED BY ORGANIZATION
@@ -105,21 +107,39 @@ on conflict (id) do update set
 
 -- Deliberately absurd values. If either of these ever reaches a page, it should be
 -- unmistakable at a glance rather than looking like a plausible fourth room.
+--
+-- ONE STATEMENT PER STATUS, and it has to be. These were a single insert until #93. The
+-- twin-rows migration replaced the (org_id, key) constraint with two partial unique indexes,
+-- so `on conflict (org_id, key)` no longer names anything Postgres can plan against, and the
+-- fix is to supply the index predicate. But a predicate names ONE of the two indexes — and a
+-- statement carrying both rows would then have an arbiter covering only one of them. The
+-- other row would still hit its own index and raise 23505 on the second run, which is exactly
+-- the re-runnability this file claims to have. Splitting gives each row the arbiter that
+-- matches it.
+--
+-- Verified by running it twice; the second run updated both rows in place.
+
 insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
-select o.id, v.key, v.age_label, v.ratio, v.group_size, v.sort_order,
-       v.status::public.content_status
+select o.id, 'rlsFixtureDraft', 'FIXTURE draft — must never be visible', '9:9', '0 children', 901,
+       'draft'::public.content_status
 from public.orgs o
-cross join (values
-  ('rlsFixtureDraft',     'FIXTURE draft — must never be visible',   '9:9', '0 children', 901, 'draft'),
-  ('rlsFixturePublished', 'FIXTURE published — other org, not ours', '9:9', '0 children', 902, 'published')
-) as v(key, age_label, ratio, group_size, sort_order, status)
 where o.slug = 'rls-fixture'
-on conflict (org_id, key) do update set
+on conflict (org_id, key) where status = 'draft' do update set
   age_label = excluded.age_label,
   ratio = excluded.ratio,
   group_size = excluded.group_size,
-  sort_order = excluded.sort_order,
-  status = excluded.status;
+  sort_order = excluded.sort_order;
+
+insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
+select o.id, 'rlsFixturePublished', 'FIXTURE published — other org, not ours', '9:9', '0 children', 902,
+       'published'::public.content_status
+from public.orgs o
+where o.slug = 'rls-fixture'
+on conflict (org_id, key) where status = 'published' do update set
+  age_label = excluded.age_label,
+  ratio = excluded.ratio,
+  group_size = excluded.group_size,
+  sort_order = excluded.sort_order;
 
 -- ---------------------------------------------------------------------------------------
 -- Prose for the fixture organization (#77)

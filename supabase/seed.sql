@@ -13,6 +13,21 @@
 -- content tables, org_id alone for the two single-row tables, and (schedule_id, program_id)
 -- for rates — so running it twice leaves identical row counts and identical values.
 --
+-- EVERY `on conflict` HERE CARRIES `where status = 'published'`, AND MUST. The twin-rows
+-- migration replaced each of those unique constraints with two partial unique indexes, one
+-- per status. `on conflict (cols)` alone can no longer tell which of the two it means, and
+-- Postgres refuses to plan the statement at all — 42P10, at plan time, so the whole file
+-- fails rather than one row. Supplying the index predicate names the published index and is
+-- the only form that works. See #93; the same form is in migrations/*backfill_prose*.sql.
+--
+-- What that choice means, beyond making the file run: a re-seed conflicts against published
+-- rows only, so a staff member's unpublished DRAFT is left exactly as it was. Re-seeding
+-- restores the live site to these values without discarding an edit somebody has in flight.
+--
+-- For the same reason, the two joins in tuition_rates filter on `status = 'published'`.
+-- Without that filter a draft schedule or a draft program would be a second join match, and
+-- the seed would write an extra published rate row pointing at a draft parent.
+--
 -- WHAT RE-RUNNING DOES NOT DO: it never deletes. Removing a program band from this file
 -- leaves the row in the database, because a seed that deletes whatever it does not recognise
 -- is one careless edit away from destroying rows an admin UI wrote. Deletions are done
@@ -66,7 +81,7 @@ select
   'published'::public.content_status
 from public.orgs o
 where o.slug = 'willow-grove'
-on conflict (org_id) do update set
+on conflict (org_id) where status = 'published' do update set
   phone_display = excluded.phone_display,
   phone_href = excluded.phone_href,
   email_display = excluded.email_display,
@@ -104,7 +119,7 @@ cross join (values
   ('preschool', '3 – 5 years',         '1:9', '18 children', 3)
 ) as v(key, age_label, ratio, group_size, sort_order)
 where o.slug = 'willow-grove'
-on conflict (org_id, key) do update set
+on conflict (org_id, key) where status = 'published' do update set
   age_label = excluded.age_label,
   ratio = excluded.ratio,
   group_size = excluded.group_size,
@@ -134,7 +149,7 @@ cross join (values
   ('pickup',    '4:30',  7)
 ) as v(label_key, "time", sort_order)
 where o.slug = 'willow-grove'
-on conflict (org_id, label_key) do update set
+on conflict (org_id, label_key) where status = 'published' do update set
   "time" = excluded."time",
   sort_order = excluded.sort_order,
   status = excluded.status;
@@ -164,7 +179,7 @@ cross join (values
   ('sofia',  'Sofia Marchetti', 2015, false, 7)
 ) as v(key, name, since, is_featured, sort_order)
 where o.slug = 'willow-grove'
-on conflict (org_id, key) do update set
+on conflict (org_id, key) where status = 'published' do update set
   name = excluded.name,
   since = excluded.since,
   is_featured = excluded.is_featured,
@@ -191,7 +206,7 @@ cross join (values
   ('twoDay',   3)
 ) as v(key, sort_order)
 where o.slug = 'willow-grove'
-on conflict (org_id, key) do update set
+on conflict (org_id, key) where status = 'published' do update set
   sort_order = excluded.sort_order,
   status = excluded.status;
 
@@ -223,10 +238,12 @@ cross join (values
   ('twoDay',   'toddlers',  925),
   ('twoDay',   'preschool', 790)
 ) as v(schedule_key, program_key, per_month)
-join public.tuition_schedules s on s.org_id = o.id and s.key = v.schedule_key
-join public.programs p on p.org_id = o.id and p.key = v.program_key
+join public.tuition_schedules s
+  on s.org_id = o.id and s.key = v.schedule_key and s.status = 'published'
+join public.programs p
+  on p.org_id = o.id and p.key = v.program_key and p.status = 'published'
 where o.slug = 'willow-grove'
-on conflict (schedule_id, program_id) do update set
+on conflict (schedule_id, program_id) where status = 'published' do update set
   per_month = excluded.per_month,
   status = excluded.status;
 
@@ -251,7 +268,7 @@ select
   'published'::public.content_status
 from public.orgs o
 where o.slug = 'willow-grove'
-on conflict (org_id) do update set
+on conflict (org_id) where status = 'published' do update set
   registration = excluded.registration,
   deposit_weeks = excluded.deposit_weeks,
   notice_weeks = excluded.notice_weeks,
