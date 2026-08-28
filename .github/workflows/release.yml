@@ -32,6 +32,17 @@ jobs:
   # insurance — the tagged commit is not guaranteed to equal a freshly-gated main HEAD.
   verify:
     uses: ./.github/workflows/ci.yml
+    # DO NOT DELETE THIS LINE. A called workflow gets no secrets unless it is told to inherit
+    # them — repository *variables* propagate on their own, secrets do not. Without it the gate
+    # still runs, and still looks like the merge gate, but `SUPABASE_TEST_PASSWORD` is absent,
+    # so every suite that signs in for real fails on a missing-configuration error rather than
+    # on anything about the release.
+    #
+    # That is what happened to v0.4.0 (#103): four of seven suites threw, the deploy job was
+    # skipped, and production stayed on v0.3.0 while GitHub showed v0.4.0 as the latest release.
+    # It went unnoticed from v0.1.0 to v0.3.0 only because no suite needed a secret until #72
+    # added the authenticated row-level security tests.
+    secrets: inherit
 
   deploy:
     name: Deploy to Netlify production
