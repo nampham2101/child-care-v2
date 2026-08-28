@@ -126,6 +126,9 @@ npx supabase migration list
 Take the version the connector recorded, and rename the local file to match it. `#72` did
 this by hand for `20260813023202_create_profiles.sql`.
 
+`#94` did the same for `20260828030312_publish_org_drafts_from_a_table_list.sql`, created as
+`…025704…` and renamed to the version the connector stamped.
+
 `#76` did the same for its three — `20260822020022_create_prose.sql`,
 `20260822020112_publish_org_drafts_covers_prose.sql`, and
 `20260822020339_backfill_prose_from_en_catalogue.sql`. Worth knowing if you copy that pattern: the
