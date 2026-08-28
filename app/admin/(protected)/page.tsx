@@ -41,13 +41,6 @@ export default async function AdminHomePage() {
           </li>
         ))}
       </ul>
-
-      <h2 className="mt-12 text-sm font-semibold tracking-widest text-ink-500 uppercase">
-        Not here yet
-      </h2>
-      <p className="mt-3 max-w-prose text-sm text-ink-700">
-        Photographs of the rooms and the garden (#78).
-      </p>
     </>
   );
 }

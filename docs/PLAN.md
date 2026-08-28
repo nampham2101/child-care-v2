@@ -306,8 +306,8 @@ them.
 Columns and constraints are specified on issue #47 and stay there. Repeating a column list in this
 document guarantees the two drift, and the migration is the thing that is actually true.
 
-`media` and Supabase Storage arrive with the upload feature later in `v0.4.0`. `profiles` landed
-first, in #72, because every other `v0.4.0` ticket sits on top of it.
+`profiles` landed first, in #72, because every other `v0.4.0` ticket sits on top of it. `media` and
+Supabase Storage landed last, in #78 — see below.
 
 ### What `profiles` decided, and what it deliberately did not (#72)
 
@@ -563,6 +563,49 @@ locale makes it a menu with one item.
 **Still not possible: creating content.** Adding a room or a staff member needs a new key, and the
 open question is how a key is generated rather than whether it is typed. #76 lifted the blocker
 (copy is editable now); the question itself is untouched.
+
+### What the photograph upload decided (#78)
+
+One picture per room, uploaded at `/admin/photos` and rendered on `/programs`. The first untrusted
+input this system has ever accepted, so most of the decisions are about the boundary.
+
+**Spaces, never people.** Rooms, the garden, the entrance. This is the existing "no photographs of
+people" decision applied, and it is what keeps this feature free of any consent dimension — there is
+nobody in the frame to obtain consent from. It is stated on the upload screen itself, not only here,
+because that is where someone would otherwise break it.
+
+**The bucket is public, decided rather than defaulted.** The public site is **prerendered**, so a
+signed URL would be baked into a page and then expire, showing broken images some hours after every
+deploy. Making signing work would mean re-signing at request time — which puts Supabase in a
+visitor's request path, ruled out above — or a lifetime so long it is public in all but name. These
+are pictures of empty rooms on a marketing site; there is nothing to protect. **Public means
+readable, not writable:** every write is governed by policies on `storage.objects`, covered by
+`tests/rls/storage.test.ts`.
+
+**The type is read from the bytes, never from the header.** A browser sets a file's type from its
+extension, so renaming `payload.svg` to `room.png` is enough to make it claim to be an image. SVG is
+the format that matters — it is a document that can carry script — and it cannot pass a signature
+check for JPEG, PNG or WebP. The bucket restates the same three in `allowed_mime_types`, so the
+application check is the first gate and not the only one.
+
+**Storage paths are `<org_id>/<key>-<timestamp>.<ext>`.** The first segment is the tenancy boundary,
+compared against `current_org_id()` by the storage policies — not a naming convention. The timestamp
+is what makes replacing a photograph safe: writing to a stable path would overwrite the bytes the
+**published** row still points at, so uploading a draft would change the live site immediately. The
+cost is that replaced images are left in the bucket; at three photographs that is a rounding error,
+and deleting on publish would race an in-flight build.
+
+**A missing image does not fail the build**, which is a deliberate exception to the rule that a
+missing fact does. `v0.4.0` ships with an empty bucket and the first upload happens after the
+release, through the admin — so failing on absence would mean the site could not build until someone
+uploaded three files. The `/programs` card renders no image and reserves no space for one, so a room
+without a photograph reads as complete rather than broken. A **failed query** is still fatal; only
+emptiness is tolerated.
+
+**`remotePatterns` is narrowed to one host and one path prefix.** `next/image` re-serves anything it
+matches, so a wildcard host turns the site's image endpoint into an open proxy. It is derived from
+`NEXT_PUBLIC_SUPABASE_URL` rather than hardcoded, so a preview pointed at another project does not
+silently fail to render every image.
 
 Why that is the right trade: the two halves fail differently. A wrong ratio or a wrong monthly rate
 is a fact a parent acts on, and those are exactly the values that were duplicated across pages before

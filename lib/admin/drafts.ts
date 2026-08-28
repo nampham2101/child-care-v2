@@ -36,7 +36,8 @@ export type DraftableTable =
   | "tuition_schedules"
   | "tuition_rates"
   | "tuition_fees"
-  | "prose";
+  | "prose"
+  | "media";
 
 /** A row as it comes back from any of those tables: an id, a status, and its own columns. */
 export type DraftableRow = {
@@ -193,6 +194,50 @@ export async function saveDraft(
   copy.status = "draft";
 
   const { error } = await loose.from(table).insert(copy);
+  if (error) throw toDraftError(error, table);
+}
+
+/**
+ * Save a draft, creating the row if nothing exists yet.
+ *
+ * ## Why this exists when `saveDraft` deliberately refuses to create
+ *
+ * `saveDraft`'s third case is missing on purpose, and the reasoning above still holds for facts:
+ * a new program band or staff member needs a **key**, and a key is a database identifier that
+ * #74 will not ask a staff member to invent.
+ *
+ * **That argument does not apply to a photograph.** The key comes from a program band that
+ * already exists — the infant room's picture is `key = 'infants'` — so nothing is being named by
+ * the person. The row is absent simply because no one has uploaded that room's photograph yet,
+ * which is the ordinary state of an empty bucket rather than a thing to refuse.
+ *
+ * So this is a narrow exception with a narrow justification, not a general relaxation.
+ * `saveDraft` remains the function every fact goes through, and it still refuses.
+ *
+ * `defaults` are the columns needed to make a complete row when creating, and are ignored when a
+ * draft or published twin is found. `org_id` is among them and cannot be inferred here — the
+ * caller reads it from the session, and the `with check` on the table refuses it if it is
+ * another organization's.
+ */
+export async function saveOrCreateDraft(
+  supabase: SupabaseClient<Database>,
+  table: DraftableTable,
+  identity: Record<string, string>,
+  changes: Record<string, string | number | boolean>,
+  defaults: Record<string, string | number | boolean>,
+): Promise<void> {
+  const loose = supabase as unknown as LooseClient;
+  const twins = await readTwins(supabase, table, identity);
+
+  if (twins.length > 0) {
+    await saveDraft(supabase, table, identity, changes);
+    return;
+  }
+
+  const { error } = await loose
+    .from(table)
+    .insert({ ...defaults, ...identity, ...changes, status: "draft" });
+
   if (error) throw toDraftError(error, table);
 }
 

@@ -42,4 +42,10 @@ export const ADMIN_SECTIONS = [
     description:
       "Every sentence on the site — room descriptions, staff bios, headings, and each FAQ answer.",
   },
+  {
+    href: "/admin/photos",
+    label: "Photographs",
+    description:
+      "A picture of each room, shown on the programs page. Spaces only — never children or staff.",
+  },
 ] as const;

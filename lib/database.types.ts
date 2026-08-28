@@ -55,6 +55,47 @@ export type Database = {
           },
         ]
       }
+      media: {
+        Row: {
+          alt: string
+          created_at: string
+          id: string
+          key: string
+          org_id: string
+          status: Database["public"]["Enums"]["content_status"]
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          alt: string
+          created_at?: string
+          id?: string
+          key: string
+          org_id: string
+          status?: Database["public"]["Enums"]["content_status"]
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          alt?: string
+          created_at?: string
+          id?: string
+          key?: string
+          org_id?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orgs: {
         Row: {
           created_at: string
