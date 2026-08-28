@@ -35,8 +35,11 @@ type PageProps = { params: Promise<{ locale: string }> };
  * interested, and it is deliberately not omitted.
  *
  * Each key names a `<topic><Question>Question` and `<topic><Question>Answer` pair in the
- * `FaqPage` namespace of `messages/en.json`, so the copy stays translatable and the page
- * carries structure rather than fifteen copies of the same markup.
+ * `FaqPage` namespace of the catalogue, so the copy stays translatable and the page carries
+ * structure rather than fifteen copies of the same markup. Since #76 those are `public.prose`
+ * rows edited at `/admin/copy`. The same namespace's `eyebrow` carries a `{count}` placeholder,
+ * which is why the editor refuses to save a message that has lost one — next-intl throws on it,
+ * and since #76 that throw fails the build.
  */
 const TOPICS = [
   { key: "place", questions: ["Waitlist", "Ahead", "Hold", "Days"] },

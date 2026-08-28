@@ -29,8 +29,8 @@ import {
 
 type PageProps = { params: Promise<{ locale: string }> };
 
-// What a rate sheet leaves out, in the order it costs a family money. Keys name the
-// strings in `messages/en.json` rather than repeating the block markup five times.
+// What a rate sheet leaves out, in the order it costs a family money. Keys name strings in the
+// catalogue — `public.prose` rows since #76 — rather than repeating the block markup five times.
 const HIDDEN_KEYS = [
   "Late",
   "Closures",

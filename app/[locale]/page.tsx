@@ -16,7 +16,8 @@ import { featuredStaff, getStaff } from "@/lib/staff";
  * it. The page is built mobile-first; the `sm:` and `lg:` steps only widen a layout that
  * already works in a narrow column.
  *
- * Its prose comes from `messages/en.json` via next-intl. The age bands and the day's
+ * Its prose comes from next-intl, whose catalogue `@/lib/prose` reads out of `public.prose`
+ * at build time — staff edit it at `/admin/copy`, not in a file. The age bands and the day's
  * rhythm now come from `@/lib/programs`, shared with `/programs` — the ratios and clock
  * times a parent compares must read the same on both pages, so they are defined once
  * there rather than typed into each page. The staff strip reads `@/lib/staff` on the same

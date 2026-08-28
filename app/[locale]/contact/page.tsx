@@ -27,8 +27,8 @@ import { getCenter } from "@/lib/center";
 type PageProps = { params: Promise<{ locale: string }> };
 
 // The three ways a parent actually arrives, in the order the block is most useful: the one
-// that goes wrong on a first drop-off is parking. Keys name the strings in
-// `messages/en.json` rather than repeating the block markup three times.
+// that goes wrong on a first drop-off is parking. Keys name strings in the catalogue —
+// `public.prose` rows since #76 — rather than repeating the block markup three times.
 const ROUTE_KEYS = ["driving", "transit", "foot"] as const;
 
 // What the call is about, in descending order of how much it matters that it reaches the
