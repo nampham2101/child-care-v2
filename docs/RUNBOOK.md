@@ -89,13 +89,24 @@ content goes live with it; no second Publish is needed.
 ## Cut a release
 
 1. Confirm `main` is green on the commit you intend to ship.
-2. Pick the version from Conventional Commits since the last release: any `feat` → minor, only
+2. **Dry run first — do not skip this.** Actions → **Release** → **Run workflow** on `main` with
+   `dry_run: true`, and wait for it to go green. It runs the same gate and the same build, but
+   publishes to a *draft* URL, so a broken gate or a dead credential surfaces here rather than on a
+   tag that cannot be reused. Open the draft URL and click through whatever the release adds.
+3. Pick the version from Conventional Commits since the last release: any `feat` → minor, only
    `fix`/`perf` → patch, a `!` / `BREAKING CHANGE` → major.
-3. GitHub → Releases → **Draft a new release**. Create tag `vX.Y.Z`, target `main`.
-4. Click **Generate release notes** — they group by label via `.github/release.yml`. Review the
+4. GitHub → Releases → **Draft a new release**. Create tag `vX.Y.Z`, target `main`. Check the
+   release **title** as well as the tag — `v0.4.0` shipped titled `v0.40`.
+5. Click **Generate release notes** — they group by label via `.github/release.yml`. Review the
    headings, then **Publish release**.
-5. `release.yml` fires: gate → `netlify deploy --build --prod`. Watch the Actions run to green.
-6. Open the production URL and confirm the site renders — a 404 means the runtime plugin did not
+6. `release.yml` fires: gate → `netlify deploy --build --prod`. Watch the Actions run, and confirm
+   the **`Deploy to Netlify production` job itself succeeded** — not just that the run finished. If
+   the gate fails, that job is *skipped* rather than failed, and GitHub still lists the release as
+   the latest one.
+7. **Confirm production actually changed.** Open a route that only the new version serves and check
+   it returns 200. A published release is not a deployed release — that is exactly how `v0.4.0` sat
+   at the top of the releases page for a day while production served `v0.3.0` (#103).
+8. Confirm the site renders — a 404 on a page that should exist means the runtime plugin did not
    run; do not leave it, roll back.
 
 ---
@@ -123,5 +134,23 @@ content goes live with it; no second Publish is needed.
 
 ## Rotate the Netlify token
 
-1. Netlify → User settings → Applications → regenerate the personal access token.
+1. Netlify → **Applications** → **Personal access tokens** → **New access token**. Name it for its
+   job (`github-actions-release · child-care-v2`), set an **Expiration**, and copy the value — once
+   you leave that page it cannot be read again.
 2. Update the `NETLIFY_AUTH_TOKEN` Actions secret. No code change, no redeploy needed.
+3. Record the new expiry date below, and dry-run the release workflow to confirm it works before you
+   need it.
+
+**Current token expires:** _not recorded — fill this in at the next rotation._
+
+Two ways this token dies, both silently:
+
+- **It expires.** Netlify asks for an expiration when the token is created, so every token has an
+  end date whether or not anyone wrote it down.
+- **A Netlify password reset invalidates it.** Per Netlify's docs, resetting the account password
+  permanently invalidates every personal access token created before the reset. If a release starts
+  failing to authenticate and nothing else changed, ask whether the password was reset.
+
+Either way the symptom is the same: the gate passes and the deploy step fails with
+`Unauthorized: could not retrieve project`. The site and the site ID are fine; the credential is not.
+This happened between `v0.3.0` and `v0.4.1` (#108).
