@@ -7,16 +7,21 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.3.0` is the released version — all seven public pages are live at
-<https://child-care-v2.netlify.app>: home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, and
-`/contact`, now reading their **facts** from Supabase at build time. Row-level security is on, and
-the anonymous key can read published rows only.
+**Current state:** `v0.4.1` is the released version, live at <https://child-care-v2.netlify.app>.
+All seven public pages — home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, `/contact` —
+read their facts and prose from Supabase at build time. Row-level security is on, and the anonymous
+key can read published rows only. Staff log in at `/admin/login`, edit facts and copy, upload images
+of the spaces, and press Publish to rebuild production.
 
-Work now targets `v0.4.0`: staff login, the content editor, the prose migration, image upload, and
-publish triggering a rebuild. Two things follow from that split, and both bite the unwary:
+**The `v0.4.0` tag is not a version of this site.** It was published, its release run failed, and
+production stayed on `v0.3.0` for a day (#103). Everything the `v0.4.0` milestone describes reached
+production as `v0.4.1`. Do not treat the `v0.4.0` tag as a rollback target — it never deployed.
 
-- **No one can edit anything yet.** `v0.3.0` shipped a database with no editor — every fact is
-  editable in principle and only through SQL in practice. That gap is the whole of `v0.4.0`.
+**`v0.5.0` has no agreed scope.** The open issues are proposals, not a plan: the three-locale i18n
+set (#52, #53, #54, #27) and a CI test (#105). None is assigned.
+
+Things that bite the unwary:
+
 - **Prose is in the database and editable** (#76, #77). 279 of the 282 strings are rows in
   `public.prose`, one per `(locale, namespace, key)`; `messages/<locale>.json` holds only three
   chrome strings. Staff edit copy at `/admin/copy`, on the same draft-then-publish path as facts.
@@ -142,7 +147,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, who reviews, release policy |
-| GitHub Issues | The task queue. Milestone `v0.4.0` is the current target |
+| GitHub Issues | The task queue. `v0.4.0` is closed and shipped; no milestone is open yet |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
