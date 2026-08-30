@@ -42,6 +42,17 @@ jobs:
     # skipped, and production stayed on v0.3.0 while GitHub showed v0.4.0 as the latest release.
     # It went unnoticed from v0.1.0 to v0.3.0 only because no suite needed a secret until #72
     # added the authenticated row-level security tests.
+    #
+    # TWO THINGS NOW GUARD THIS LINE (#105), because "do not delete" is not a mechanism:
+    #
+    #   - `scripts/require-complete-gate.mjs` runs as the first step of the called gate. Delete
+    #     the line and the next release fails in ten seconds with an error naming it, instead of
+    #     failing four suites on a missing-configuration error that reads like a broken database.
+    #   - `scripts/require-complete-gate.test.mjs` asserts this line is still here, on the merge
+    #     gate. Delete it and the pull request goes red before a release is ever cut.
+    #
+    # So if you are here because a test told you off for removing it: that is the tripwire
+    # working, and the five weeks of ungated releases it is named after are in #103.
     secrets: inherit
 
   deploy:

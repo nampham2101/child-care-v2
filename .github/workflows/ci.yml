@@ -25,6 +25,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ---------------------------------------------------------------------------------------
+      # CAN THIS GATE ACTUALLY RUN IN FULL? (#105)
+      # ---------------------------------------------------------------------------------------
+      #
+      # First, before the install, because the thing it protects against is a run that looks
+      # like the merge gate and is not one. `release.yml` reuses this workflow through
+      # `workflow_call`, and a called workflow inherits repository *variables* by itself but
+      # never *secrets* — so a release gate can silently run a weaker configuration than the
+      # merge gate did. That is #103: four suites threw a missing-configuration error, the
+      # deploy was skipped, and production stayed on v0.3.0 while v0.4.0 showed as released.
+      #
+      # Refusing here turns that into one annotated error in the first ten seconds that names
+      # `secrets: inherit` as the fix, rather than a pile of database errors several minutes in
+      # that read as though the database were broken. Node is preinstalled on the runner, so
+      # this needs neither setup-node nor npm ci above it.
+      #
+      # `scripts/require-complete-gate.test.mjs` is the other half and runs on the merge gate:
+      # it asserts this step still exists and that release.yml still inherits secrets.
+      - name: The gate must be able to run in full
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_TEST_PASSWORD: ${{ secrets.SUPABASE_TEST_PASSWORD }}
+        run: node scripts/require-complete-gate.mjs
+
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
