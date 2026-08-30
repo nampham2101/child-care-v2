@@ -14,4 +14,23 @@ export const routing = defineRouting({
   locales: ["en"],
   defaultLocale: "en",
   localePrefix: "always",
+  /*
+   * **No automatic redirect based on `Accept-Language`** — settled on #52.
+   *
+   * next-intl will happily negotiate a locale from the browser header, and it is the wrong
+   * default here for two reasons:
+   *
+   *   - **It surprises people.** A browser's language is not reliably the language someone
+   *     wants to read a licensing detail in. A parent who reads German at home and does
+   *     business in English gets German, having asked for nothing, and the way back is a
+   *     control they now have to find in a language they did not choose.
+   *   - **It breaks caching.** A response that varies on a request header cannot be one static
+   *     file at the edge. Every public page here is prerendered, which `docs/PLAN.md` treats
+   *     as load-bearing, and negotiation would put a decision in front of all of them.
+   *
+   * So: everyone gets `en` unless they say otherwise, and saying otherwise is the switcher in
+   * the header. `x-default` in `lib/seo.ts` points at English for the same reason — it names
+   * what a visitor with no preference is actually served.
+   */
+  localeDetection: false,
 });

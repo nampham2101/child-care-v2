@@ -7,6 +7,7 @@ import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getSpaceImages } from "@/lib/media";
 import { getProgramBands } from "@/lib/programs";
+import { alternatesFor } from "@/lib/seo";
 
 /**
  * `/programs` — the page a parent opens second, after deciding the home page is worth
@@ -40,6 +41,8 @@ export async function generateMetadata({
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
+    // Every locale's version of THIS page, plus a self-referential canonical (#52).
+    alternates: alternatesFor("/programs", locale),
   };
 }
 

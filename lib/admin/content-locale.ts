@@ -29,25 +29,21 @@
  * an unrouted locale must not reach a query, or the editor would silently show and save rows
  * for a language the site does not ship.
  */
-import { routing } from "@/i18n/routing";
-
-/** The locales the site routes. The single source #52 also uses for the public switcher. */
-export const CONTENT_LOCALES: readonly string[] = routing.locales;
-
-/** What the editor falls back to, and what it shows when there is nothing to choose. */
-export const DEFAULT_CONTENT_LOCALE: string = routing.defaultLocale;
+import { DEFAULT_LOCALE, localeEnglishName, LOCALES } from "@/lib/locales";
 
 /**
- * Whether to render a control at all.
+ * The locales the editor may point at, and the fallback.
  *
- * **A picker with one option is worse than no picker.** It implies a choice that does not
- * exist and takes up the space where a real one would go. #111 gates on this deliberately so
- * the ticket can merge and release while English is the only catalogue, and light up on its own
- * the day #53 or #54 lands — no second pull request, no flag to remember to flip.
+ * Re-exported from `@/lib/locales` rather than read from `routing` again: #52 added a public
+ * switcher that needs the same answers, and `docs/CONVENTIONS.md` says a helper needed twice
+ * moves to one place instead of being pasted. These aliases stay because "content locale" is
+ * the vocabulary the admin uses, and the distinction from the interface locale is the whole
+ * point of this module.
  */
-export function isLocaleSwitchable(): boolean {
-  return CONTENT_LOCALES.length > 1;
-}
+export const CONTENT_LOCALES = LOCALES;
+export const DEFAULT_CONTENT_LOCALE = DEFAULT_LOCALE;
+
+export { isLocaleSwitchable } from "@/lib/locales";
 
 /**
  * Resolve an untrusted value — a search parameter, a form field — to a locale the site routes.
@@ -72,18 +68,7 @@ export function resolveContentLocale(value: unknown): string {
  * same "derive it, do not list it" rule the rest of this ticket follows.
  */
 export function contentLocaleName(locale: string): string {
-  // `Intl.DisplayNames.of` THROWS a RangeError on a structurally invalid tag rather than
-  // returning undefined — `of("pt BR")` is an exception, not a fallback. Every caller here
-  // passes a locale already resolved against `routing.locales`, so this should be unreachable;
-  // it is caught anyway because the alternative is that one malformed entry in `routing`
-  // takes down the whole copy editor with a stack trace instead of an odd-looking label.
-  try {
-    return (
-      new Intl.DisplayNames(["en"], { type: "language" }).of(locale) ?? locale
-    );
-  } catch {
-    return locale;
-  }
+  return localeEnglishName(locale);
 }
 
 /**

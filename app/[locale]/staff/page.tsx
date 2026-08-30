@@ -5,6 +5,7 @@ import { PageHero } from "@/components/site/PageHero";
 import { StaffCard } from "@/components/site/StaffCard";
 import { VisitSection } from "@/components/site/VisitSection";
 import { averageTenure, getStaff, yearsWith } from "@/lib/staff";
+import { alternatesFor } from "@/lib/seo";
 
 /**
  * `/staff` — the page that expands the home page's three-person strip into the whole team.
@@ -42,6 +43,8 @@ export async function generateMetadata({
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
+    // Every locale's version of THIS page, plus a self-referential canonical (#52).
+    alternates: alternatesFor("/staff", locale),
   };
 }
 

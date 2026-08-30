@@ -215,7 +215,10 @@ exactly those.
 
 - No inquiry form, tour booking, or waitlist
 - No parent accounts, child records, attendance, or billing
-- No second language shipped (only structured for it)
+- ~~No second language shipped (only structured for it)~~ — **reversed on #52, 2026-08-30.**
+  German and Italian are being added in `v0.5.0`. The switcher, `hreflang`, sitemap and
+  detection policy shipped in #52; the catalogues follow in #53 and #54. See the note under
+  *After v1*.
 - No payment provider, no transactional email vendor
 
 Netlify has form handling as a built-in platform primitive, so an inquiry form later needs no
@@ -840,6 +843,27 @@ Postgres-container option is the fallback and the shim is the price.
 ## After v1
 
 Not in scope, listed so sequencing is visible: inquiry form (first, and cheap on Netlify) → tour
-booking → waitlist → second language → then the operations platform (enrollment records, attendance,
-daily reports to parents, billing). The multi-tenant-ready schema and Supabase Auth are what that
-platform would stand on.
+booking → waitlist → ~~second language~~ → then the operations platform (enrollment records,
+attendance, daily reports to parents, billing). The multi-tenant-ready schema and Supabase Auth are
+what that platform would stand on.
+
+### The second language moved to the front — #52, 2026-08-30
+
+**This reverses the sequencing above**, and the reversal is recorded rather than quietly edited in,
+because the ordering was a real decision and so is changing it.
+
+The original argument put a second language behind the inquiry form, tour booking and the waitlist:
+those three convert a browsing parent into a conversation, and a translation does not. That argument
+is still sound *for a real center*. It was overtaken by what this project actually is — a practice
+project with no real users, where the fictional placeholder location means the languages a Northwest
+Portland neighbourhood really speaks was never a live consideration. German and Italian were chosen
+as an engineering exercise in running three locales, not as a market decision.
+
+**The risk consciously accepted:** the site gains roughly 8,000 words of machine-translated copy that
+nobody on the project reads natively, and a translated page carries the same licensing and safety
+details as the English one. That is acceptable here precisely because no parent is reading it. It
+would not be on a real center's site, and **the tripwire is exactly that** — if this ever became a
+live site for a real center, the translations need a native reviewer before launch, not after.
+
+Split across three tickets so a stall in one language cannot block the other: #52 is the switcher and
+SEO infrastructure (no new language), #53 is German, #54 is Italian.

@@ -5,6 +5,7 @@ import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getCenter } from "@/lib/center";
 import { getProgramBands } from "@/lib/programs";
+import { alternatesFor } from "@/lib/seo";
 
 /**
  * `/about` — the page a parent opens when they have decided the center looks plausible
@@ -62,6 +63,8 @@ export async function generateMetadata({
     description: t("metaDescription", {
       since: String(center.yearsOperatingSince),
     }),
+    // Every locale's version of THIS page, plus a self-referential canonical (#52).
+    alternates: alternatesFor("/about", locale),
   };
 }
 
