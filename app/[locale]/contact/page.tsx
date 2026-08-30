@@ -5,6 +5,7 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getCenter } from "@/lib/center";
+import { alternatesFor } from "@/lib/seo";
 
 /**
  * `/contact` — the page a parent opens once they have decided to act.
@@ -44,6 +45,8 @@ export async function generateMetadata({
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
+    // Every locale's version of THIS page, plus a self-referential canonical (#52).
+    alternates: alternatesFor("/contact", locale),
   };
 }
 

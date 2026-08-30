@@ -6,14 +6,23 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server";
+import { LocaleSwitcher } from "@/components/site/LocaleSwitcher";
 import { SiteNav } from "@/components/site/SiteNav";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getCenter } from "@/lib/center";
 import { geistSans } from "@/lib/fonts";
+import { SITE_URL } from "@/lib/seo";
 import "../globals.css";
 
 export const metadata: Metadata = {
+  /*
+   * Required for `hreflang` and the sitemap (#52): Next resolves the relative alternates each
+   * page declares against this, and without it they would be emitted relative and ignored.
+   * `lib/seo.ts` explains why it follows the Netlify deploy URL rather than being hard-coded —
+   * a preview must not claim to be production.
+   */
+  metadataBase: new URL(SITE_URL),
   // `default` is the full home-page title; `template` lets a sub-page set just its own
   // name (`"Programs"`) and get `"Programs · Willow Grove Children's Center"` for free,
   // so the center name is written once here rather than on every page.
@@ -65,14 +74,22 @@ export default async function LocaleLayout({
               Being `sticky` also makes this the containing block the mobile menu panel
               positions against, so the panel drops flush with the header's bottom edge. */}
           <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-5 py-4">
+            {/* `gap-3` and the `min-w-0` below are what make this hold at 360px with the
+                language control present (#52). The centre's name is the flexible element:
+                it shrinks and truncates rather than pushing the nav toggle off the edge,
+                because a half-visible name is recoverable and an unreachable menu is not. */}
+            <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-5 py-4">
               <Link
                 href="/"
-                className="rounded-sm text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-4 focus-visible:ring-offset-background focus-visible:outline-none"
+                className="min-w-0 truncate rounded-sm text-base font-semibold text-ink-900 focus-visible:ring-2 focus-visible:ring-sage-900 focus-visible:ring-offset-4 focus-visible:ring-offset-background focus-visible:outline-none"
               >
                 {center.name}
               </Link>
-              <SiteNav />
+              {/* `shrink-0` so the controls keep their full width and the name gives way. */}
+              <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+                <LocaleSwitcher locale={locale} />
+                <SiteNav />
+              </div>
             </div>
           </header>
 

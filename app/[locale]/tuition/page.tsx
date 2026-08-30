@@ -4,6 +4,7 @@ import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
 import { getProgramBands } from "@/lib/programs";
+import { alternatesFor } from "@/lib/seo";
 import {
   formatRate,
   getFees,
@@ -48,6 +49,8 @@ export async function generateMetadata({
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
+    // Every locale's version of THIS page, plus a self-referential canonical (#52).
+    alternates: alternatesFor("/tuition", locale),
   };
 }
 

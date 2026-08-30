@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallButton } from "@/components/site/CallButton";
 import { DayTimeline } from "@/components/site/DayTimeline";
@@ -6,6 +7,7 @@ import { PageHero } from "@/components/site/PageHero";
 import { StaffCard } from "@/components/site/StaffCard";
 import { getCenter } from "@/lib/center";
 import { getProgramBands } from "@/lib/programs";
+import { alternatesFor } from "@/lib/seo";
 import { featuredStaff, getStaff } from "@/lib/staff";
 
 /**
@@ -25,6 +27,21 @@ import { featuredStaff, getStaff } from "@/lib/staff";
  *
  * It is a Server Component with no interactivity — nothing here needs `"use client"`.
  */
+
+/**
+ * The home page takes its title and description from the root layout — it is the one page whose
+ * name IS the centre's name, so `title.template` would append it twice. What it does need of
+ * its own is `alternates` (#52): every locale's version of `/`, and a canonical pointing at
+ * itself. Inheriting the layout's would be wrong the moment a sub-page inherited the same one.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return { alternates: alternatesFor("/", locale) };
+}
 
 export default async function Home({
   params,
