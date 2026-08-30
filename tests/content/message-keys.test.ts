@@ -166,3 +166,36 @@ describe("the catalogue file holds only chrome", () => {
     expect(keys.sort()).toEqual(["Nav.closeMenu", "Nav.label", "Nav.openMenu"]);
   });
 });
+
+/**
+ * The three strings that get written into other sentences exist in every locale the site routes.
+ *
+ * #110 moved the age range, the opening hours and the neighbourhood out of `site_settings` and
+ * into `prose`, because they are sentences rather than facts. They are not like the rest of the
+ * copy in one specific way: **they are interpolated into other prose at render time.**
+ *
+ *     HomePage.heroEyebrow   'Licensed child care · Ages {ageRange}'
+ *     HomePage.heroBody      'A small, licensed center in {neighborhood}, where …'
+ *     ProgramsPage.eyebrow   'Ages {ageRange}'
+ *
+ * So a German catalogue missing `Center.hoursShort` does not leave a quiet gap at the edge of a
+ * page — it breaks the sentence that was supposed to contain it. The assertions above join rows
+ * to keys and cannot see these three, because no database row renders them; they are standalone
+ * strings that only the pages ask for.
+ *
+ * `i18n/request.ts` does already throw on a missing key, so this cannot ship silently. But that
+ * throw happens part-way through a Netlify build, and the point of this suite is to answer the
+ * question here instead — in seconds, naming the locale and the key. It matters most for #53 and
+ * #54, where the failure would otherwise be a red deploy of an otherwise finished translation.
+ */
+describe("the strings that other strings interpolate", () => {
+  test.each(catalogues)("all present in $locale", async ({ locale }) => {
+    const messages = await catalogueFor(locale);
+
+    expect(Object.keys(messages.Center ?? {}).sort()).toEqual([
+      "ageRange",
+      "hoursShort",
+      "neighborhood",
+    ]);
+  });
+});

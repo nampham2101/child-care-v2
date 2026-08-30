@@ -281,12 +281,9 @@ const COVERAGE: CoverageSpec[] = [
       email_href: "mailto:fixture@example.com",
       license_number: marker,
       years_operating_since: 2000,
-      age_range: marker,
       infant_ratio: "9:9",
-      hours_short: marker,
       address_line1: marker,
       address_line2: marker,
-      neighborhood: marker,
     }),
   },
   {

@@ -14,6 +14,10 @@ import { createServerSupabase } from "@/lib/supabase-server";
  * `site_settings` keeps `phone_display` beside `phone_href` so the pretty format and the dial
  * target cannot disagree, and the surest way to make them disagree is to ask a person to keep
  * both in sync. So the `tel:` and `mailto:` are derived — see `lib/admin/validation.ts`.
+ *
+ * The ages, opening hours and neighbourhood are **not** saved here any more. #110 moved them
+ * into `public.prose`, so the copy editor owns them and this action must not also write them —
+ * two forms writing one row is how an edit silently loses to whichever was saved last.
  */
 export async function saveCenter(
   _previous: SaveState,
@@ -39,14 +43,11 @@ export async function saveCenter(
       // number is rendered as "since 2009" on the footer of every page.
       { min: 1900, max: new Date().getFullYear() },
     ),
-    age_range: reader.text("age_range", "Ages you take", { max: 60 }),
     infant_ratio: reader.text("infant_ratio", "Infant ratio", { max: 20 }),
-    hours_short: reader.text("hours_short", "Opening hours", { max: 60 }),
     address_line1: reader.text("address_line1", "Street address", { max: 120 }),
     address_line2: reader.text("address_line2", "Town, state and postcode", {
       max: 120,
     }),
-    neighborhood: reader.text("neighborhood", "Neighbourhood", { max: 60 }),
   };
 
   const result = reader.finish(fields);

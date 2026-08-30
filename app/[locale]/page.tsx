@@ -36,6 +36,10 @@ export default async function Home({
 
   const t = await getTranslations("HomePage");
   const tBands = await getTranslations("Programs");
+  // The ages, hours and neighbourhood are copy, not facts — #110 moved them out of
+  // `site_settings` and into the catalogue so a translated page does not carry an English
+  // clause through the middle of a German sentence.
+  const tCenter = await getTranslations("Center");
   const center = await getCenter();
   const bands = await getProgramBands();
   const featured = featuredStaff(await getStaff());
@@ -52,10 +56,10 @@ export default async function Home({
           in here so the hero's right half carries proof instead of empty space, and so
           the same four facts are not stated twice within one screen. */}
       <PageHero
-        eyebrow={t("heroEyebrow", { ageRange: center.ageRange })}
+        eyebrow={t("heroEyebrow", { ageRange: tCenter("ageRange") })}
         heading={t("heroHeading")}
         headingId="hero-heading"
-        intro={t("heroBody", { neighborhood: center.neighborhood })}
+        intro={t("heroBody", { neighborhood: tCenter("neighborhood") })}
         card={
           <HeroFacts
             variant="stat"
@@ -197,7 +201,7 @@ export default async function Home({
                 <dt className="text-sm font-medium text-ink-500">
                   {t("contactHours")}
                 </dt>
-                <dd className="text-ink-900">{center.hoursShort}</dd>
+                <dd className="text-ink-900">{tCenter("hoursShort")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-ink-500">
@@ -222,7 +226,7 @@ export default async function Home({
             aria-hidden="true"
             className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-sage-50 text-sm text-sage-700"
           >
-            {t("mapLabel", { neighborhood: center.neighborhood })}
+            {t("mapLabel", { neighborhood: tCenter("neighborhood") })}
           </div>
         </div>
       </section>
