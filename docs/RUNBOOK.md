@@ -126,6 +126,16 @@ content goes live with it; no second Publish is needed.
 - **Dry run (does not touch production):** Actions → **Release** → **Run workflow** with
   `dry_run: true`. Produces a *draft* deploy at its own URL; the live site is untouched. Confirms
   the token/site-id auth, that the Next.js plugin builds, and that the draft renders.
+
+  **It also proves the gate is the full gate**, which is the half that failed silently for five
+  weeks (#103). Read two things in the run's log before trusting it:
+
+  - `Gate configuration is complete` from the preflight (#105) — the release gate has every
+    credential the merge gate has, so `secrets: inherit` is doing its job.
+  - The **e2e count**. A release gate runs 54; a working copy without `SUPABASE_TEST_PASSWORD`
+    runs 34. A release run reporting 34 is the #103 shape and must not be released from.
+
+  Last verified on `main` at `242fc54`, 2026-08-30: preflight passed, 54 e2e, draft deploy only.
 - **Full rehearsal (proves the real `--prod` path and rollback):** publish a GitHub **pre-release**
   on a throwaway tag such as `v0.1.0-rc.1`. `release: published` fires for pre-releases, so this
   exercises the true production deploy; then rehearse the rollback steps above.
