@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { getCenter } from "@/lib/center";
 
 /**
  * `/faq` — the questions parents ask on the phone, including the ones they cannot ask on
@@ -73,7 +72,10 @@ export default async function Faq({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations("FaqPage");
-  const center = await getCenter();
+  // The age range is copy, not a fact — see #110 and the note in `lib/center.ts`. With it in
+  // the catalogue this page reads no `site_settings` row at all, so `getCenter` is gone from
+  // here rather than left fetching a row nothing uses.
+  const tCenter = await getTranslations("Center");
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -88,7 +90,7 @@ export default async function Faq({ params }: PageProps) {
         card={
           <HeroFacts
             facts={[
-              { label: t("factAgesLabel"), value: center.ageRange },
+              { label: t("factAgesLabel"), value: tCenter("ageRange") },
               {
                 label: t("factCountLabel"),
                 value: String(QUESTION_COUNT),

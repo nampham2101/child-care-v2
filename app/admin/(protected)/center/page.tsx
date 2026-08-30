@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { saveCenter } from "@/app/admin/(protected)/center/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
@@ -33,6 +34,21 @@ export default async function CenterPage() {
         licence number in the footer of every page. Changing one here changes
         every place it shows.
       </p>
+      {/* Three fields used to be on this form and are now in the copy editor (#110): they are
+          sentences rather than facts, so they need to be translatable. A staff member who
+          knew where they were will otherwise conclude they have been taken away. */}
+      <p className="mt-3 max-w-prose text-ink-700">
+        The ages you take, your opening hours and your neighbourhood are written
+        into sentences on the site, so they are edited with the rest of the
+        words —{" "}
+        <Link
+          className="font-medium underline underline-offset-2"
+          href="/admin/copy/center"
+        >
+          Ages, hours and area
+        </Link>
+        .
+      </p>
 
       <div className="mt-8">
         <EditorForm action={saveCenter}>
@@ -54,12 +70,6 @@ export default async function CenterPage() {
               inputMode="email"
               defaultValue={center.emailDisplay}
             />
-            <Field
-              name="hours_short"
-              label="Opening hours"
-              hint="Short enough to sit in a card — for example “Mon–Fri, 7:00am–6:00pm”."
-              defaultValue={center.hoursShort}
-            />
           </Section>
 
           <Section title="Where you are">
@@ -73,16 +83,10 @@ export default async function CenterPage() {
               label="Town, state and postcode"
               defaultValue={center.addressLine2}
             />
-            <Field
-              name="neighborhood"
-              label="Neighbourhood"
-              hint="How a local would describe where you are. Parents search this way."
-              defaultValue={center.neighborhood}
-            />
           </Section>
 
           <Section
-            title="Licence and ages"
+            title="Licence and ratio"
             description="The evidence a parent is looking for before anything else."
           >
             <Field
@@ -97,12 +101,6 @@ export default async function CenterPage() {
               type="number"
               inputMode="numeric"
               defaultValue={center.yearsOperatingSince}
-            />
-            <Field
-              name="age_range"
-              label="Ages you take"
-              hint="For example “6 weeks to 5 years”."
-              defaultValue={center.ageRange}
             />
             <Field
               name="infant_ratio"

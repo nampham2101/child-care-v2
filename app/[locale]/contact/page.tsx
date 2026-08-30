@@ -52,6 +52,8 @@ export default async function Contact({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations("ContactPage");
+  // Copy, not a fact — see #110 and the note in `lib/center.ts`.
+  const tCenter = await getTranslations("Center");
   const center = await getCenter();
 
   const address = `${center.address.line1}, ${center.address.line2}`;
@@ -71,7 +73,7 @@ export default async function Contact({ params }: PageProps) {
           <HeroFacts
             facts={[
               { label: t("factAddressLabel"), value: address },
-              { label: t("factHoursLabel"), value: center.hoursShort },
+              { label: t("factHoursLabel"), value: tCenter("hoursShort") },
               { label: t("factClosedLabel"), value: t("factClosedValue") },
               {
                 label: t("factEmailLabel"),

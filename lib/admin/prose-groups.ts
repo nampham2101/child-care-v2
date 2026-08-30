@@ -110,6 +110,13 @@ export const PROSE_GROUPS: readonly ProseGroup[] = [
     where: "The visit card, which repeats at the bottom of most pages.",
   },
   {
+    slug: "center",
+    namespace: "Center",
+    label: "Ages, hours and area",
+    where:
+      "Three details that get written into sentences across the site — the hero, the programs page, and the FAQ. They used to be on the center's details form; they are here because they are sentences, not numbers.",
+  },
+  {
     slug: "navigation",
     namespace: "Nav",
     label: "Menu links",

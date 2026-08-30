@@ -250,15 +250,12 @@ export type Database = {
         Row: {
           address_line1: string
           address_line2: string
-          age_range: string
           created_at: string
           email_display: string
           email_href: string
-          hours_short: string
           id: string
           infant_ratio: string
           license_number: string
-          neighborhood: string
           org_id: string
           phone_display: string
           phone_href: string
@@ -269,15 +266,12 @@ export type Database = {
         Insert: {
           address_line1: string
           address_line2: string
-          age_range: string
           created_at?: string
           email_display: string
           email_href: string
-          hours_short: string
           id?: string
           infant_ratio: string
           license_number: string
-          neighborhood: string
           org_id: string
           phone_display: string
           phone_href: string
@@ -288,15 +282,12 @@ export type Database = {
         Update: {
           address_line1?: string
           address_line2?: string
-          age_range?: string
           created_at?: string
           email_display?: string
           email_href?: string
-          hours_short?: string
           id?: string
           infant_ratio?: string
           license_number?: string
-          neighborhood?: string
           org_id?: string
           phone_display?: string
           phone_href?: string

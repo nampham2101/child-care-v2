@@ -66,8 +66,8 @@ insert into public.site_settings (
   phone_display, phone_href,
   email_display, email_href,
   license_number, years_operating_since,
-  age_range, infant_ratio, hours_short,
-  address_line1, address_line2, neighborhood,
+  infant_ratio,
+  address_line1, address_line2,
   status
 )
 select
@@ -75,9 +75,8 @@ select
   '(503) 555-0142', 'tel:+15035550142',
   'hello@willowgrove.example', 'mailto:hello@willowgrove.example',
   'C-1094872', 2009,
-  '6 weeks to 5 years', '1:4', 'Mon–Fri, 7:00 AM – 6:00 PM',
+  '1:4',
   '428 Alder Street', 'Portland, OR 97210',
-  'Northwest Portland, one block from Wallace Park',
   'published'::public.content_status
 from public.orgs o
 where o.slug = 'willow-grove'
@@ -88,12 +87,9 @@ on conflict (org_id) where status = 'published' do update set
   email_href = excluded.email_href,
   license_number = excluded.license_number,
   years_operating_since = excluded.years_operating_since,
-  age_range = excluded.age_range,
   infant_ratio = excluded.infant_ratio,
-  hours_short = excluded.hours_short,
   address_line1 = excluded.address_line1,
   address_line2 = excluded.address_line2,
-  neighborhood = excluded.neighborhood,
   status = excluded.status;
 
 -- ---------------------------------------------------------------------------------------

@@ -10,6 +10,21 @@
  * come from `site_settings`, which is what makes them editable by center staff without a
  * developer — the entire reason `docs/PLAN.md` puts a database behind a brochure site.
  *
+ * ## Facts only. Sentences live in `public.prose`
+ *
+ * Everything here is the same string in every language: a phone number, an email address, a
+ * licence number, a street address, a year, a ratio written "1:4". That is why the table has
+ * no locale column and does not need one.
+ *
+ * Three fields used to sit here that were not facts at all — the age range, the opening hours,
+ * and the neighbourhood are English *sentences*, and they are interpolated into other copy at
+ * render time, so on a German page they would appear mid-sentence rather than politely at the
+ * edge. #110 moved them into `public.prose`, which already has a locale, an editor, and
+ * placeholder validation. Read them with `useTranslations("Center")`.
+ *
+ * **The test to apply before adding a field here:** would this string be identical in German?
+ * If not, it is copy, and it belongs in `prose`.
+ *
  * **This runs at build time, not in a visitor's request path.** Every page that calls it is
  * prerendered, and `docs/PLAN.md` rules out putting Supabase in front of a visitor. If a page
  * calling this ever becomes dynamic, that decision has been broken silently — the build
@@ -34,11 +49,8 @@ export type Center = {
   emailHref: string;
   licenseNumber: string;
   yearsOperatingSince: number;
-  ageRange: string;
   infantRatio: string;
-  hoursShort: string;
   address: { line1: string; line2: string };
-  neighborhood: string;
 };
 
 /**
@@ -54,8 +66,8 @@ export const getCenter = cache(async (): Promise<Center> => {
       `phone_display, phone_href,
        email_display, email_href,
        license_number, years_operating_since,
-       age_range, infant_ratio, hours_short,
-       address_line1, address_line2, neighborhood,
+       infant_ratio,
+       address_line1, address_line2,
        orgs!inner (name, slug)`,
     )
     // The join is inner and filtered, so this cannot return a different organization's row
@@ -75,10 +87,7 @@ export const getCenter = cache(async (): Promise<Center> => {
     emailHref: row.email_href,
     licenseNumber: row.license_number,
     yearsOperatingSince: row.years_operating_since,
-    ageRange: row.age_range,
     infantRatio: row.infant_ratio,
-    hoursShort: row.hours_short,
     address: { line1: row.address_line1, line2: row.address_line2 },
-    neighborhood: row.neighborhood,
   };
 });

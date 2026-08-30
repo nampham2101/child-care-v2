@@ -5,7 +5,6 @@ import { DayTimeline } from "@/components/site/DayTimeline";
 import { HeroFacts } from "@/components/site/HeroFacts";
 import { PageHero } from "@/components/site/PageHero";
 import { VisitSection } from "@/components/site/VisitSection";
-import { getCenter } from "@/lib/center";
 import { getSpaceImages } from "@/lib/media";
 import { getProgramBands } from "@/lib/programs";
 
@@ -50,7 +49,10 @@ export default async function Programs({ params }: PageProps) {
 
   const t = await getTranslations("ProgramsPage");
   const tBands = await getTranslations("Programs");
-  const center = await getCenter();
+  // The age range is copy, not a fact — see #110 and the note in `lib/center.ts`. With it in
+  // the catalogue this page reads no `site_settings` row at all, so `getCenter` is gone from
+  // here rather than left fetching a row nothing uses.
+  const tCenter = await getTranslations("Center");
   const bands = await getProgramBands();
   /*
    * Photographs are optional, and that is the whole difference between this query and every
@@ -76,7 +78,7 @@ export default async function Programs({ params }: PageProps) {
       {/* The card is the three ratios, which is what a parent opens this page to find.
           The rooms below give each one its context; the hero gives the numbers first. */}
       <PageHero
-        eyebrow={t("eyebrow", { ageRange: center.ageRange })}
+        eyebrow={t("eyebrow", { ageRange: tCenter("ageRange") })}
         heading={t("heading")}
         headingId="programs-heading"
         intro={t("intro")}
