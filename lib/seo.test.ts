@@ -13,7 +13,75 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_LOCALE, LOCALES } from "@/lib/locales";
-import { alternatesFor, localeUrl, SITE_URL } from "@/lib/seo";
+import { alternatesFor, localeUrl, resolveSiteUrl, SITE_URL } from "@/lib/seo";
+
+/**
+ * The regression that shipped in v0.5.0 and was found on the live site.
+ *
+ * `release.yml` deploys from a detached checkout of a tag, so Netlify set `DEPLOY_PRIME_URL` to
+ * `https://head--child-care-v2.netlify.app`. The old precedence preferred it over everything, so
+ * production shipped every canonical and every `hreflang` pointing at a hostname that is not the
+ * site — the exact failure `lib/seo.ts` exists to prevent.
+ *
+ * There was no test here because `SITE_URL` was a module constant read straight from
+ * `process.env`, which is not reachable from a test. Making it a function of an env object is
+ * most of the fix; these are the cases that would have caught it.
+ */
+describe("resolveSiteUrl", () => {
+  it("ignores a DEPLOY_PRIME_URL from a tag deploy", () => {
+    // Verbatim from the v0.5.0 release run.
+    expect(
+      resolveSiteUrl({
+        DEPLOY_PRIME_URL: "https://head--child-care-v2.netlify.app",
+        URL: "https://child-care-v2.netlify.app",
+      }),
+    ).toBe("https://child-care-v2.netlify.app");
+  });
+
+  it("defaults to production when the context says nothing", () => {
+    // Nothing is inferred INTO production. An unrecognised or absent CONTEXT — a local build,
+    // a CLI deploy, a runner — must never produce a preview hostname on the real site.
+    expect(resolveSiteUrl({})).toBe("https://child-care-v2.netlify.app");
+    expect(
+      resolveSiteUrl({
+        CONTEXT: "production",
+        DEPLOY_PRIME_URL: "https://head--child-care-v2.netlify.app",
+      }),
+    ).toBe("https://child-care-v2.netlify.app");
+  });
+
+  it("lets a real preview describe itself", () => {
+    expect(
+      resolveSiteUrl({
+        CONTEXT: "deploy-preview",
+        DEPLOY_PRIME_URL:
+          "https://deploy-preview-118--child-care-v2.netlify.app",
+      }),
+    ).toBe("https://deploy-preview-118--child-care-v2.netlify.app");
+  });
+
+  it("still falls back to production if a preview has no URL to offer", () => {
+    expect(resolveSiteUrl({ CONTEXT: "deploy-preview" })).toBe(
+      "https://child-care-v2.netlify.app",
+    );
+  });
+
+  it("honours an explicit override above everything", () => {
+    expect(
+      resolveSiteUrl({
+        NEXT_PUBLIC_SITE_URL: "https://example.test/",
+        CONTEXT: "deploy-preview",
+        DEPLOY_PRIME_URL: "https://deploy-preview-1--x.netlify.app",
+      }),
+    ).toBe("https://example.test");
+  });
+
+  it("never leaves a trailing slash for the URL builders to double up", () => {
+    expect(
+      resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://example.test/" }),
+    ).toBe("https://example.test");
+  });
+});
 
 describe("localeUrl", () => {
   it("is absolute — a relative hreflang is ignored, silently", () => {

@@ -20,20 +20,61 @@
  */
 import { DEFAULT_LOCALE, LOCALES } from "@/lib/locales";
 
+/** The one hostname this site is actually served from. */
+const PRODUCTION_URL = "https://child-care-v2.netlify.app";
+
+/**
+ * Netlify's own name for the kind of deploy being built. A CLI `--prod` deploy is not
+ * guaranteed to report `production`, so this is used only to recognise a PREVIEW — never to
+ * confirm production. See `resolveSiteUrl`.
+ */
+const PREVIEW_CONTEXTS = new Set(["deploy-preview", "branch-deploy", "dev"]);
+
 /**
  * Where the site actually lives. Absolute URLs are required in `hreflang` and in a sitemap —
  * a relative one is ignored, silently.
  *
- * Overridable by environment so a Deploy Preview describes itself rather than claiming to be
- * production, which would invite a crawler to index the preview's URLs as the canonical ones.
- * Netlify sets `URL` on production builds and `DEPLOY_PRIME_URL` on previews.
+ * ## This got it wrong once, in production, and the shape of the mistake matters
+ *
+ * The first version preferred `DEPLOY_PRIME_URL` over everything, on the reasoning that a
+ * Deploy Preview should describe itself rather than claim to be production. That is the right
+ * goal and the wrong precedence.
+ *
+ * `release.yml` deploys from a **detached checkout of a tag**, so Netlify derived a branch name
+ * of `HEAD` and set `DEPLOY_PRIME_URL` to `https://head--child-care-v2.netlify.app`. It won.
+ * v0.5.0 therefore shipped every canonical and every `hreflang` on the live site pointing at a
+ * hostname that is not the site — which is precisely the "extra languages COST you visibility"
+ * failure this module was written to prevent, caused by the module itself.
+ *
+ * **It was invisible everywhere except production.** Locally none of these variables are set,
+ * so the fallback produced the right answer; on a Deploy Preview `deploy-preview-118--…` is
+ * exactly what a preview should say. Only a real release could expose it.
+ *
+ * ## So the precedence is inverted: production is the default, previews opt out
+ *
+ * Nothing is now inferred *into* production. The canonical hostname is what you get unless the
+ * build says, explicitly, that it is a preview. The failure modes are deliberately asymmetric:
+ *
+ *   - Getting production wrong deindexes the real site. Unacceptable.
+ *   - Getting a preview wrong makes a preview claim to be production — untidy, and harmless,
+ *     because previews carry `X-Robots-Tag: noindex` from Netlify and are not crawled.
+ *
+ * When those are the two errors available, take the second one every time.
  */
-export const SITE_URL: string = (
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  process.env.DEPLOY_PRIME_URL ??
-  process.env.URL ??
-  "https://child-care-v2.netlify.app"
-).replace(/\/$/, "");
+export function resolveSiteUrl(
+  env: Record<string, string | undefined>,
+): string {
+  const explicit = env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  if (PREVIEW_CONTEXTS.has(env.CONTEXT ?? "") && env.DEPLOY_PRIME_URL) {
+    return env.DEPLOY_PRIME_URL.replace(/\/$/, "");
+  }
+
+  return PRODUCTION_URL;
+}
+
+export const SITE_URL: string = resolveSiteUrl(process.env);
 
 /**
  * The absolute URL of one unlocalized route in one locale.
