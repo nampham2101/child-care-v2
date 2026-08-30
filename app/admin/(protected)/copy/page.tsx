@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ContentLocaleSwitcher } from "@/components/admin/ContentLocaleSwitcher";
 import { DraftBadge } from "@/components/admin/Section";
+import { localeHref, resolveContentLocale } from "@/lib/admin/content-locale";
 import { getEditableProse } from "@/lib/admin/editable";
 import { PROSE_GROUPS } from "@/lib/admin/prose-groups";
 
 export const metadata: Metadata = { title: "The words" };
+
+/** `?locale=de` — a control's state, not a route. `lib/admin/content-locale.ts` says why. */
+type Search = { searchParams: Promise<{ locale?: string }> };
 
 /**
  * Where a staff member starts when something on the site reads wrong.
@@ -19,10 +24,15 @@ export const metadata: Metadata = { title: "The words" };
  * single number would say "you have edits somewhere", which is the state that sends someone
  * opening all thirteen groups to find them.
  */
-export default async function CopyIndexPage() {
+export default async function CopyIndexPage({ searchParams }: Search) {
+  const locale = resolveContentLocale((await searchParams).locale);
+
   const groups = await Promise.all(
     PROSE_GROUPS.map(async (group) => {
-      const strings = await getEditableProse(group.namespace);
+      // The counts are per locale, deliberately. "3 not published yet" has to mean three in
+      // the language being looked at — a total across every locale would send a staff member
+      // into a group to find nothing pending in the words they can read.
+      const strings = await getEditableProse(group.namespace, locale);
       return {
         ...group,
         total: strings.length,
@@ -45,11 +55,15 @@ export default async function CopyIndexPage() {
         the main page.
       </p>
 
+      <ContentLocaleSwitcher pathname="/admin/copy" locale={locale} />
+
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {groups.map((group) => (
           <li key={group.slug}>
             <Link
-              href={`/admin/copy/${group.slug}`}
+              // Carries the chosen locale through, so picking a language once holds for the
+              // whole visit rather than resetting on every group a staff member opens.
+              href={localeHref(`/admin/copy/${group.slug}`, locale)}
               className="flex h-full flex-col rounded-2xl border border-border bg-cream-50 p-5 transition-colors hover:border-sage-500 focus-visible:ring-2 focus-visible:ring-sage-700 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-100 focus-visible:outline-none"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">

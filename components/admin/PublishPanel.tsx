@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { publishAll } from "@/app/admin/(protected)/actions";
+import { isLocaleSwitchable } from "@/lib/admin/content-locale";
 import { IDLE } from "@/lib/admin/form-state";
 
 /**
@@ -15,6 +16,20 @@ import { IDLE } from "@/lib/admin/form-state";
  * autosave", and the reason is cost: every publish is one to two minutes of Netlify build
  * minutes. Naming the number on the control is what makes it deliberate — a staff member sees
  * that six edits go out together, rather than pressing something ambiguous six times.
+ *
+ * ## Why it names languages once there is more than one (#111)
+ *
+ * `publish_org_drafts` promotes **every** pending draft in the organization. The locale is part
+ * of how a draft is matched to its published twin, so a German edit can never overwrite the
+ * English row — but it is not part of what the sweep selects, so there is no such thing as
+ * publishing one language.
+ *
+ * That is the same all-or-nothing this button has always had: a half-edited tuition rate goes
+ * out with a half-edited FAQ answer. Language is not a special case of it. But it is the one a
+ * staff member is most likely to get wrong, because the copy editor now has a control that
+ * makes it feel as though they are working *inside* one language — so the panel says plainly
+ * that publishing leaves that scope. Saying it here is cheaper and more honest than a
+ * per-locale publish that the machinery does not support.
  */
 export function PublishPanel({ pending }: { pending: number }) {
   const [state, formAction] = useActionState(publishAll, IDLE);
@@ -37,6 +52,13 @@ export function PublishPanel({ pending }: { pending: number }) {
             The public site still shows the old versions. Publishing sends them
             all out together and takes about two minutes.
           </p>
+          {isLocaleSwitchable() ? (
+            <p className="mt-1.5 text-sm text-ink-700">
+              That includes every language — there is no way to publish one on
+              its own. If a translation is half-finished, it goes out
+              half-finished.
+            </p>
+          ) : null}
         </>
       )}
 
