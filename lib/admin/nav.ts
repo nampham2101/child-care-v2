@@ -15,8 +15,11 @@ export const ADMIN_SECTIONS = [
   {
     href: "/admin/center",
     label: "The center",
-    description:
-      "Phone, email, licence number, opening hours, address, and the ages you take.",
+    // Not "opening hours" or "the ages you take" any more: #110 moved those, and the
+    // neighbourhood, into the copy editor, because they are sentences that need translating
+    // rather than facts. A description promising fields that are no longer on the page sends a
+    // staff member to the wrong editor and makes them think something was lost.
+    description: "Phone, email, licence number, address, and the infant ratio.",
   },
   {
     href: "/admin/programs",
@@ -40,7 +43,7 @@ export const ADMIN_SECTIONS = [
     href: "/admin/copy",
     label: "The words",
     description:
-      "Every sentence on the site — room descriptions, staff bios, headings, and each FAQ answer.",
+      "Every sentence on the site — room descriptions, staff bios, headings, each FAQ answer, and the ages, hours and area written into them.",
   },
   {
     href: "/admin/photos",
