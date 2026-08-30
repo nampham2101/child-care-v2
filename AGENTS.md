@@ -10,25 +10,49 @@ that audience, and never put anything in them you would not publish.
 **Current state:** `v0.4.1` is the released version, live at <https://child-care-v2.netlify.app>.
 All seven public pages — home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, `/contact` —
 read their facts and prose from Supabase at build time. Row-level security is on, and the anonymous
-key can read published rows only. Staff log in at `/admin/login`, edit facts and copy, upload images
-of the spaces, and press Publish to rebuild production.
+key can read published rows only. Staff log in at `/admin/sign-in`, edit facts and copy, upload
+images of the spaces, and press Publish to rebuild production.
 
 **The `v0.4.0` tag is not a version of this site.** It was published, its release run failed, and
 production stayed on `v0.3.0` for a day (#103). Everything the `v0.4.0` milestone describes reached
 production as `v0.4.1`. Do not treat the `v0.4.0` tag as a rollback target — it never deployed.
 
-**`v0.5.0` has no agreed scope.** The open issues are proposals, not a plan: the three-locale i18n
-set (#52, #53, #54, #27) and a CI test (#105). None is assigned.
+**`v0.5.0` is scoped and its work is on `main`, unreleased.** Agreed 2026-08-30: **the i18n
+plumbing only** — #110 (locale-dependent `site_settings` fields moved to `prose`), #111 (content
+locale control in the copy editor), #52 (public switcher, `hreflang`, sitemap). #112 and #115 landed
+alongside it.
+
+**The German (#53) and Italian (#54) catalogues are deliberately NOT in `v0.5.0`**, so translation
+quality is not rushed to hit a tag. They are still proposals; do not start them without an
+assignment. #27, #113 and #116 are also open proposals.
+
+**Nothing multilingual is visible yet.** `routing.locales` is still `["en"]`, and every piece of
+#52 and #111 is gated on `routing.locales.length > 1` — so the switchers render nothing and light up
+by themselves when a catalogue lands. That is deliberate, not unfinished.
 
 Things that bite the unwary:
 
-- **Prose is in the database and editable** (#76, #77). 279 of the 282 strings are rows in
+- **Prose is in the database and editable** (#76, #77). 284 of the 287 strings are rows in
   `public.prose`, one per `(locale, namespace, key)`; `messages/<locale>.json` holds only three
   chrome strings. Staff edit copy at `/admin/copy`, on the same draft-then-publish path as facts.
   Do not send anyone to `messages/en.json` to change a sentence.
-- **A `{placeholder}` is load-bearing.** Nineteen strings interpolate a value at render time, and
+- **`site_settings` holds facts, never sentences** (#110). The ages, opening hours and neighbourhood
+  used to live there and are now `prose` rows under the `Center` namespace, because they are English
+  sentences interpolated into other sentences. The test before adding a field there: *would this
+  string be identical in German?* If not, it is copy and belongs in `prose`.
+- **A `{placeholder}` is load-bearing.** Twenty strings interpolate a value at render time, and
   next-intl throws on a message missing one — which now fails the build. `FieldReader.prose` is what
-  stops a staff member deleting one; do not weaken it.
+  stops a staff member deleting one; do not weaken it. Since #111 the required set for a
+  translation comes from the **default locale's** row, not from the row being edited — deriving it
+  from the row would let an already-broken translation validate against itself forever.
+- **Publishing is all-or-nothing, including across languages** (#111). `publish_org_drafts` promotes
+  every pending draft in the organization. The locale is part of how a draft is matched to its
+  published twin, so a German edit can never overwrite the English row — but there is no such thing
+  as publishing one language. Whether to change that is #116.
+- **Locales are derived from `routing.locales`, never listed** (#52). The switcher, `hreflang`, the
+  sitemap and the admin's content-locale control all read that one list through `lib/locales.ts`.
+  Adding a language must stay a one-line change; a hand-kept copy anywhere is the one that goes
+  stale, and a locale that exists but is invisible to search fails silently.
 - **Photographs of the spaces exist** (#78). A `spaces` bucket, a `media` table, uploads at
   `/admin/photos`, rendered on `/programs`. **Never photographs of people** — that decision is what
   keeps consent out of this project entirely, and it is the one rule here with no technical

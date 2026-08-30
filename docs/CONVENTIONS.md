@@ -320,9 +320,14 @@ inside the query instead. `lib/staff.ts` and `lib/tuition.ts` are the worked exa
 `averageTenure()` reading a module constant. It is what lets the fast suite check the arithmetic
 against a fixture in milliseconds instead of against a seeded project over a network.
 
-Unit tests live beside the module they cover, as `*.test.ts` — the naming table above. `tests/e2e/`
-is Playwright's alone, and `npm run test:unit` is scoped to `lib/` so the two runners never try to
-execute each other's files.
+Unit tests live beside the module they cover, as `*.test.ts` — the naming table above. A script in
+`scripts/` may carry one too, as `*.test.mjs`, beside the script it covers; `vitest.config.mts`
+includes both `lib/**/*.test.ts` and `scripts/**/*.test.mjs`. `tests/e2e/` is Playwright's alone,
+and the two runners never try to execute each other's files.
+
+*(This paragraph said `test:unit` was "scoped to `lib/`" until #113. That stopped being true at #67,
+which put the build-cache guard beside its script — and read as a rule that a script may not have a
+test, which was never the intent. The point that matters is the separation from Playwright.)*
 
 CI gates merge on: **typecheck, lint, formatting, unit tests, the database suites, production
 build, and end-to-end tests.** Unit tests run before the build, because they need neither the build

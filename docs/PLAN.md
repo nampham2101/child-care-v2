@@ -543,11 +543,16 @@ member knows the typo is on the FAQ page and nothing about how it is stored. Eac
 own count of unpublished edits; one total at the top would say "you have edits somewhere", which is
 the state that sends someone opening all thirteen.
 
-**A `{placeholder}` cannot be deleted.** Nineteen strings interpolate a value at render time.
+**A `{placeholder}` cannot be deleted.** Twenty strings interpolate a value at render time.
 next-intl throws on a message missing one, and since #76 that throw fails the build — so the edit
 would save, publish, and break the next deploy minutes later with nothing connecting the two.
 `FieldReader.prose` refuses it and names the placeholder; the required list is re-derived
-server-side from the stored row, never read from the form.
+server-side, never read from the form.
+
+Since #111 that list comes from the **default locale's** row rather than from the row being edited.
+The distinction does not matter with one language and is the whole thing with two: a German row that
+has already lost `{ageRange}` would validate against itself and stay broken forever. A translator
+may reorder placeholders — German grammar often demands it — but may not drop one.
 
 **The field label is derived from the key**, so `placeWaitlistAnswer` reads "Place waitlist answer".
 This bends #74's *never show a column name*, knowingly: a prose row has no name column, its key is
@@ -644,11 +649,21 @@ schema instead of needing a data migration under live child records.
 /admin/*          Staff-only, behind Supabase Auth
 ```
 
-Routes are locale-prefixed (`/[locale]/...`), `en` default and only shipped locale.
+Routes are locale-prefixed (`/[locale]/...`), `en` default and — until #53 or #54 lands — still the
+only shipped locale. The switcher, `hreflang` and per-locale sitemap entries shipped in #52 and are
+gated on `routing.locales.length > 1`, so they are present in the code and invisible on the site.
+There is deliberately **no `Accept-Language` redirect** (#52): it surprises people whose browser
+language is not the one they want to read licensing details in, and a response that varies on a
+request header cannot be a static file at the edge.
 
-Every page gets metadata and OG images; the site emits `LocalBusiness` / `ChildCare` JSON-LD,
-`sitemap.xml`, and `robots.txt`. Note that the single biggest lever for a child care center being
-found is the **Google Business Profile**, which is an owner task, not a code task.
+Every page gets metadata; the site emits `sitemap.xml`. Note that the single biggest lever for a
+child care center being found is the **Google Business Profile**, which is an owner task, not a code
+task.
+
+**Not built, despite what this paragraph used to claim:** OG images, `LocalBusiness` / `ChildCare`
+JSON-LD, and `robots.txt`. They were written here as though they existed; only `sitemap.xml` does,
+and only since #52. Corrected in the #52 docs sweep rather than left as a plan that reads like a
+description of the site.
 
 ---
 

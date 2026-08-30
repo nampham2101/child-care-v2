@@ -78,6 +78,35 @@ dashboard under Settings → Database, and it is a different credential from the
 in `.env.example`. Linking writes the project ref into `supabase/.temp/`, which is
 gitignored.
 
+### If `db push` says the project is not linked
+
+```
+LegacyProjectNotLinkedError: Cannot find project ref. Have you run supabase link?
+```
+
+The link step above has not been run **on this machine**, or `supabase/.temp/` has been cleaned
+away. Because it is gitignored, a fresh clone never has it — so this is the normal state of a new
+working copy, not a broken one.
+
+**It fails safe: nothing reaches the database.** That matters more than it sounds. On #110 the
+migration was reported as pushed when `db push` had exited on this error before touching anything,
+and the mismatch was only caught by checking `supabase_migrations.schema_migrations` against the
+actual columns. **Verify a migration landed rather than trusting that the command was run** — a
+schema change is not a thing to assume.
+
+### Applying through the management connector instead
+
+A migration can also be applied through the Supabase management API (the MCP connector), which needs
+no database password. It is a legitimate route and was used for `20260830015431` on #110, with the
+owner's explicit approval — but two things differ from `db push` and both matter:
+
+- **There is no dry run.** Read the SQL yourself first; `db push --dry-run` is the safety this path
+  does not have.
+- **It stamps its own timestamp version**, not the one in your filename. Rename the local migration
+  file to match what lands in `schema_migrations`, or the next `db push` will see the file as
+  unapplied and try to run it again. (Every migration here should be re-runnable anyway — but a
+  history that disagrees with the repository is a trap for whoever reads it next.)
+
 ## Regenerating the types
 
 `lib/database.types.ts` is generated from the live schema and committed, so that a query
