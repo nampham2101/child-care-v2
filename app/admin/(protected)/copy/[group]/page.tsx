@@ -3,13 +3,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { saveProse } from "@/app/admin/(protected)/copy/[group]/actions";
+import { ContentLocaleSwitcher } from "@/components/admin/ContentLocaleSwitcher";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { ProseField } from "@/components/admin/ProseField";
 import { DraftBadge } from "@/components/admin/Section";
+import {
+  contentLocaleName,
+  DEFAULT_CONTENT_LOCALE,
+  localeHref,
+  resolveContentLocale,
+} from "@/lib/admin/content-locale";
 import { getEditableProse } from "@/lib/admin/editable";
 import { groupBySlug, proseLimitFor } from "@/lib/admin/prose-groups";
 
-type Params = { params: Promise<{ group: string }> };
+type Params = {
+  params: Promise<{ group: string }>;
+  searchParams: Promise<{ locale?: string }>;
+};
 
 /*
  * Deliberately no `generateStaticParams`. Every route under `(protected)` is server-rendered
@@ -38,15 +48,23 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
  * the FAQ fixes four things and presses Save once. `saveProse` writes a draft only for the
  * strings that actually changed, so the other 45 rows are not touched.
  */
-export default async function CopyGroupPage({ params }: Params) {
+export default async function CopyGroupPage({ params, searchParams }: Params) {
   const { group: slug } = await params;
   const group = groupBySlug(slug);
   if (!group) notFound();
 
-  const strings = await getEditableProse(group.namespace);
-  // An empty group means the backfill did not cover this namespace. `assertGroupsCoverAll` is
-  // what catches that in CI; here it is a 404 rather than a form with no fields.
-  if (strings.length === 0) notFound();
+  const locale = resolveContentLocale((await searchParams).locale);
+  const strings = await getEditableProse(group.namespace, locale);
+
+  // An empty group in the DEFAULT locale means the backfill did not cover this namespace —
+  // a developer problem, which `assertGroupsCoverAll` catches in CI and which is a 404 here
+  // rather than a form with no fields.
+  //
+  // An empty group in ANOTHER locale means something entirely different and ordinary: nobody
+  // has translated this group yet. A 404 for that would read as a broken admin, because the
+  // staff member reached it by picking a valid language from a control this page rendered. So
+  // it is stated plainly instead — see the branch below.
+  if (strings.length === 0 && locale === DEFAULT_CONTENT_LOCALE) notFound();
 
   const limit = proseLimitFor(strings.map((string) => string.value));
   const pending = strings.filter((string) => string.hasDraft).length;
@@ -54,7 +72,7 @@ export default async function CopyGroupPage({ params }: Params) {
   return (
     <>
       <Link
-        href="/admin/copy"
+        href={localeHref("/admin/copy", locale)}
         className="text-sm font-medium text-sage-700 hover:text-sage-900 focus-visible:ring-2 focus-visible:ring-sage-700 focus-visible:outline-none"
       >
         ← All the words
@@ -64,6 +82,24 @@ export default async function CopyGroupPage({ params }: Params) {
         {group.label}
       </h1>
       <p className="mt-2 max-w-prose text-ink-700">{group.where}</p>
+
+      <ContentLocaleSwitcher
+        pathname={`/admin/copy/${group.slug}`}
+        locale={locale}
+      />
+
+      {/* Nothing stored for this group in this language yet. Not an error — #53 and #54 seed a
+          catalogue wholesale, so until one lands a group is simply untranslated. It says so
+          rather than showing an empty form, because `saveDraft` deliberately refuses to create
+          rows from nothing (#74) and a form here could not save anything a person typed. */}
+      {strings.length === 0 ? (
+        <p className="mt-8 max-w-prose rounded-2xl border border-border bg-cream-50 px-5 py-4 text-ink-700">
+          This group has not been translated into {contentLocaleName(locale)}{" "}
+          yet, so there is nothing here to edit. Translations are added in one
+          go by a developer; once they exist, they are edited here like any
+          other words.
+        </p>
+      ) : null}
 
       {pending > 0 ? (
         <p className="mt-4 max-w-prose rounded-xl border border-border bg-cream-50 px-4 py-3 text-sm text-ink-700">
@@ -75,30 +111,36 @@ export default async function CopyGroupPage({ params }: Params) {
         </p>
       ) : null}
 
-      <div className="mt-8">
-        <EditorForm action={saveProse}>
-          <input type="hidden" name="group_slug" value={group.slug} />
+      {strings.length === 0 ? null : (
+        <div className="mt-8">
+          <EditorForm action={saveProse}>
+            <input type="hidden" name="group_slug" value={group.slug} />
+            {/* Posted so the save lands on the language being edited. `saveProse` re-validates
+              it against `routing.locales` rather than trusting it — a hand-crafted POST must
+              not be able to write rows for a locale the site does not ship. */}
+            <input type="hidden" name="locale" value={locale} />
 
-          <div className="flex flex-col gap-6 rounded-2xl border border-border bg-cream-50 p-6">
-            {strings.map((string) => (
-              <div key={string.key}>
-                {string.hasDraft ? (
-                  <div className="mb-2">
-                    <DraftBadge />
-                  </div>
-                ) : null}
-                <ProseField
-                  name={`prose__${string.key}`}
-                  label={string.label}
-                  value={string.value}
-                  placeholders={string.placeholders}
-                  max={limit}
-                />
-              </div>
-            ))}
-          </div>
-        </EditorForm>
-      </div>
+            <div className="flex flex-col gap-6 rounded-2xl border border-border bg-cream-50 p-6">
+              {strings.map((string) => (
+                <div key={string.key}>
+                  {string.hasDraft ? (
+                    <div className="mb-2">
+                      <DraftBadge />
+                    </div>
+                  ) : null}
+                  <ProseField
+                    name={`prose__${string.key}`}
+                    label={string.label}
+                    value={string.value}
+                    placeholders={string.placeholders}
+                    max={limit}
+                  />
+                </div>
+              ))}
+            </div>
+          </EditorForm>
+        </div>
+      )}
     </>
   );
 }
