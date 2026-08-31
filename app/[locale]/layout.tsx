@@ -23,9 +23,15 @@ export const metadata: Metadata = {
    * a preview must not claim to be production.
    */
   metadataBase: new URL(SITE_URL),
-  // `default` is the full home-page title; `template` lets a sub-page set just its own
-  // name (`"Programs"`) and get `"Programs · Willow Grove Children's Center"` for free,
-  // so the center name is written once here rather than on every page.
+  // `template` lets a sub-page set just its own name (`"Programs"`) and get
+  // `"Programs · Willow Grove Children's Center"` for free, so the center name is written once
+  // here rather than on every page. It is a proper noun and identical in every language.
+  //
+  // `default` and `description` are the LAST RESORT only. Every one of the seven public pages
+  // now supplies its own from the catalogue, the home page included since #53 — so what still
+  // reaches these two is a route with no metadata of its own, which today means `/_not-found`.
+  // They stay English because they are not on a translated page; making them locale-aware would
+  // mean a `generateMetadata` here whose only caller is the 404.
   title: {
     default:
       "Willow Grove Children's Center · Licensed child care in NW Portland",

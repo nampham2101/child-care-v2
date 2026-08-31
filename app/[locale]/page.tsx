@@ -29,10 +29,15 @@ import { featuredStaff, getStaff } from "@/lib/staff";
  */
 
 /**
- * The home page takes its title and description from the root layout — it is the one page whose
- * name IS the centre's name, so `title.template` would append it twice. What it does need of
- * its own is `alternates` (#52): every locale's version of `/`, and a canonical pointing at
- * itself. Inheriting the layout's would be wrong the moment a sub-page inherited the same one.
+ * The home page used to take its title and description from the root layout's static English —
+ * correct while `en` was the only locale, and wrong the moment #53 added a second: a German page
+ * carried an English title into every search result and share card. They are prose rows now,
+ * under the same `metaTitle` / `metaDescription` key names every other page already uses.
+ *
+ * `title.absolute` rather than `title`, because the layout's template appends the centre's name
+ * and this page's title already IS the centre's name — the plain form would print it twice.
+ *
+ * `alternates` (#52) stays: every locale's version of `/`, plus a canonical pointing at itself.
  */
 export async function generateMetadata({
   params,
@@ -40,7 +45,13 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { alternates: alternatesFor("/", locale) };
+  const t = await getTranslations({ locale, namespace: "HomePage" });
+
+  return {
+    title: { absolute: t("metaTitle") },
+    description: t("metaDescription"),
+    alternates: alternatesFor("/", locale),
+  };
 }
 
 export default async function Home({
@@ -83,10 +94,16 @@ export default async function Home({
             facts={[
               { value: center.infantRatio, label: t("trustInfantRatio") },
               {
-                value: `${yearsOperating} years`,
+                // Both of these were English literals until #53 — the label beside them came
+                // from the catalogue and the value did not, which no one could see while
+                // English was the only locale.
+                value: t("yearsValue", { years: yearsOperating }),
                 label: t("trustYearsCaring"),
               },
-              { value: "7am–6pm", label: t("trustOpenWeekdays") },
+              {
+                value: tCenter("hoursCompact"),
+                label: t("trustOpenWeekdays"),
+              },
               { value: center.licenseNumber, label: t("trustStateLicense") },
             ]}
           />

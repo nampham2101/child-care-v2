@@ -28,7 +28,7 @@ operations platform is built on.
 | Product shape | One center now, built multi-tenant-ready |
 | Conversion | No forms. Call, email, or visit |
 | Content editing | Center staff, via an admin UI |
-| Languages | English now, structured for a second later |
+| Languages | English now, structured for a second later — **German landed on #53**, Italian is #54 |
 | Center identity | **Fictional placeholder.** Name, address, and copy are invented for now |
 | Photography | **Placeholder imagery.** Must be replaced before any real launch — see the risk note below |
 

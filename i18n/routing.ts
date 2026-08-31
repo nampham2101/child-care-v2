@@ -4,14 +4,21 @@ import { defineRouting } from "next-intl/routing";
  * The site's locale routing, defined once and shared by the middleware, the request
  * config, and the navigation helpers so they can never disagree about what a locale is.
  *
- * `en` is the default and, today, the only shipped locale — but every public route is
- * still locale-prefixed (`localePrefix: "always"`), so `/` redirects to `/en` and the URL
- * shape is already correct for the day a second locale lands. Adding that locale is then
- * mostly a new file under `messages/`, not a routing change. This is the "English now,
- * structured for a second later" decision in `docs/PLAN.md`.
+ * `en` is the default; `de` joined it with the German catalogue (#53). Every public route is
+ * locale-prefixed (`localePrefix: "always"`), so `/` redirects to `/en` and the URL shape was
+ * already correct on the day the second locale landed — this list is the whole routing change
+ * that shipping one takes. That is the "English now, structured for a second later" decision
+ * in `docs/PLAN.md`, paying out as designed.
+ *
+ * **This list is the gate, and it comes last.** A locale is invisible to visitors until it
+ * appears here, so the 282 German rows could land, be reviewed and be corrected while nothing
+ * routed to them. #53 and #54 both order their work that way deliberately, and
+ * `docs/adr/0002-publishing-stays-organization-wide.md` leans on it: it is the reason a
+ * half-finished translation sitting in the database reaches nobody. Adding a locale here
+ * before its rows exist fails the build in `getProse`, naming the locale.
  */
 export const routing = defineRouting({
-  locales: ["en"],
+  locales: ["en", "de"],
   defaultLocale: "en",
   localePrefix: "always",
   /*

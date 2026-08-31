@@ -194,6 +194,11 @@ describe("the strings that other strings interpolate", () => {
 
     expect(Object.keys(messages.Center ?? {}).sort()).toEqual([
       "ageRange",
+      // Added by #53. `hoursShort` is the full 'Mon–Fri, 7:00 AM – 6:00 PM' for the contact
+      // page; `hoursCompact` is the '7am–6pm' the home page's stat card has room for, and it
+      // was an English literal in `app/[locale]/page.tsx` until a German page made the
+      // difference between a value and a translated value visible.
+      "hoursCompact",
       "hoursShort",
       "neighborhood",
     ]);

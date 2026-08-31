@@ -28,9 +28,11 @@ describe("what the editor may be pointed at", () => {
     expect(DEFAULT_CONTENT_LOCALE).toBe(routing.defaultLocale);
   });
 
-  it("renders no control while one locale is shipped", () => {
-    // Today's state, and the reason #111 can merge and release before any catalogue exists.
-    // A picker with one option implies a choice that is not there.
+  it("offers the control only when there is more than one locale to choose", () => {
+    // Derived from the routing rather than asserted as a constant, which is why this survived
+    // #53 unchanged: it read "renders no control while one locale is shipped" and was true of
+    // a one-locale site, and it is now true of a two-locale one for the same reason. A picker
+    // with one option implies a choice that is not there.
     expect(isLocaleSwitchable()).toBe(routing.locales.length > 1);
   });
 });
@@ -43,10 +45,16 @@ describe("resolveContentLocale", () => {
   });
 
   it("refuses a locale the site does not ship", () => {
-    // The security case. Without this, `?locale=de` would reach `getEditableProse` and then
+    // The security case. Without this, `?locale=fr` would reach `getEditableProse` and then
     // `saveDraft`, and a staff member could read and write rows for a language nothing renders
     // — content that no page would ever show and no test would ever check.
-    expect(resolveContentLocale("de")).toBe(DEFAULT_CONTENT_LOCALE);
+    //
+    // This example was `"de"` until #53 shipped the German catalogue, at which point the
+    // assertion started failing for the right reason: `de` is routed now, so resolving it is
+    // correct rather than a refusal. `fr` is the stand-in because it is a well-formed tag the
+    // site does not route — deliberately not gibberish, since the case worth guarding is a
+    // plausible locale, not a malformed one.
+    expect(resolveContentLocale("fr")).toBe(DEFAULT_CONTENT_LOCALE);
     expect(resolveContentLocale("../../etc/passwd")).toBe(
       DEFAULT_CONTENT_LOCALE,
     );
