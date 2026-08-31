@@ -22,20 +22,34 @@ plumbing only** — #110 (locale-dependent `site_settings` fields moved to `pros
 locale control in the copy editor), #52 (public switcher, `hreflang`, sitemap). #112 and #115 landed
 alongside it.
 
-**The German (#53) and Italian (#54) catalogues are deliberately NOT in `v0.5.0`**, so translation
-quality is not rushed to hit a tag. They are still proposals; do not start them without an
-assignment. #27, #113 and #116 are also open proposals.
+**German (#53) is built and on a branch, unreleased.** `routing.locales` is `["en", "de"]`, so the
+site is genuinely bilingual: 287 prose rows per locale, `/de/*` prerendered beside `/en/*`, and
+every piece of #52 and #111 that was gated on `routing.locales.length > 1` has lit up by itself —
+the public switcher, `hreflang`, the sitemap's German entries, and the admin's content-locale
+control. Nothing had to be flipped on; that gating was the design paying out.
 
-**Nothing multilingual is visible yet.** `routing.locales` is still `["en"]`, and every piece of
-#52 and #111 is gated on `routing.locales.length > 1` — so the switchers render nothing and light up
-by themselves when a catalogue lands. That is deliberate, not unfinished.
+**The Italian catalogue (#54) is still a proposal**, as are #27 and #123. Do not start them without
+an assignment.
+
+**One English string still reaches a German page, knowingly.** `programs.age_label` and
+`programs.group_size` hold English sentences in a facts table with no locale — "15 months – 3
+years", "8 children" — so they render untranslated. That is **#123**, the same argument #110 made
+about `site_settings`, and it is deliberately outside #53 for the reason #110 was carved out in the
+first place: shared infrastructure that #54 would otherwise ride free on.
+`tests/e2e/german.spec.ts` names #123 where it excludes those strings.
 
 Things that bite the unwary:
 
-- **Prose is in the database and editable** (#76, #77). 284 of the 287 strings are rows in
-  `public.prose`, one per `(locale, namespace, key)`; `messages/<locale>.json` holds only three
-  chrome strings. Staff edit copy at `/admin/copy`, on the same draft-then-publish path as facts.
-  Do not send anyone to `messages/en.json` to change a sentence.
+- **Prose is in the database and editable** (#76, #77). 287 of the site's 290 strings are rows in
+  `public.prose`, one per `(locale, namespace, key)` and now doubled across `en` and `de`;
+  `messages/<locale>.json` holds only the three chrome strings. Staff edit copy at `/admin/copy`,
+  on the same draft-then-publish path as facts. Do not send anyone to `messages/en.json` to change
+  a sentence.
+- **A hardcoded string is invisible until a second locale exists** (#53). Four English literals sat
+  in TSX for months — the call button's verb, two hero stat values, the home page's metadata —
+  indistinguishable from catalogue rows while `en` was the only locale, and untranslatable the
+  moment `de` landed. They are rows now. The test before writing any user-facing text in a
+  component: *would a German page show this?* If yes, it is a row.
 - **`site_settings` holds facts, never sentences** (#110). The ages, opening hours and neighbourhood
   used to live there and are now `prose` rows under the `Center` namespace, because they are English
   sentences interpolated into other sentences. The test before adding a field there: *would this
