@@ -369,6 +369,21 @@ first ADR in this repository. The one line worth repeating here, because it is t
 motivated the whole change: flipping a live row to `draft` would have removed it from the anonymous
 read and **failed the next build**, so editing the phone number would have broken the next deploy.
 
+### Publishing is organization-wide, in every language (#116)
+
+One press of Publish promotes every pending draft the organization has, in every locale. The locale
+is part of how a draft is matched to its published twin — a German edit can never overwrite the
+English row — but it is not part of what the sweep selects, so **there is no such thing as
+publishing one language.** `components/admin/PublishPanel.tsx` says so on screen once a second
+locale is switchable.
+
+That is a decision, not a limitation waiting to be lifted:
+[`docs/adr/0002-publishing-stays-organization-wide.md`](adr/0002-publishing-stays-organization-wide.md)
+records why a locale argument has no honest meaning across nine tables when seven of them have no
+locale at all, why the risky stretch is already covered by `routing.locales` being code behind a
+release tag, and the tripwire that should make us revisit — the first request to hold back one
+pending edit, for any reason.
+
 ### What the editor decided about keys (#74)
 
 **`key` and `label_key` are not editable, and are never shown.** #74 offered two ways to handle the
