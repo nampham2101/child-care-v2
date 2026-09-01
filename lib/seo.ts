@@ -106,7 +106,9 @@ export function localeUrl(path: string, locale: string): string {
  * expressed preference is served.
  *
  * Returns `languages` even with one locale configured. A single self-referential alternate is
- * harmless and correct, and means there is nothing here to remember the day #53 lands.
+ * harmless and correct, and meant there was nothing here to remember the day #53 landed — which
+ * is what happened: `de` joined `routing.locales` and the German `hreflang` entries appeared
+ * without this function being touched.
  */
 export function alternatesFor(
   path: string,

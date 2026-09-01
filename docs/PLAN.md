@@ -125,12 +125,16 @@ touches routing.
 **Why `/admin` sits outside the locale tree at all.** The locale segment exists so a *parent* can
 read the site in their language. Staff are the people who work at this one center, and the admin is
 a tool rather than a publication, so prefixing it would add `/en/` to every staff URL and imply a
-translated admin that nothing intends to build. *Tripwire, now handled:* #77 put prose editing in
-the admin, and a staff member will eventually need to choose which **content** locale they are
-editing. Every function in `lib/admin/editable.ts` takes a locale and defaults to
-`routing.defaultLocale`; **no picker is rendered**, because one shipped locale makes a control with
-a single option into dead UI. When #53 or #54 lands, that control goes *inside the page* and never
-as a prefix on the admin URL — the two are easy to conflate and expensive to unpick.
+translated admin that nothing intends to build. *Tripwire, now discharged:* #77 put prose editing in
+the admin, and a staff member needs to choose which **content** locale they are editing. Every
+function in `lib/admin/editable.ts` takes a locale and defaults to `routing.defaultLocale`; #111
+added the control and #53 gave it a second option to show, so it renders today.
+
+It landed exactly where this paragraph said it should — **inside the page, as `?locale=de`, never
+as a prefix on the admin URL.** `lib/admin/content-locale.ts` holds the reasoning and treats the
+value as hostile, because a search parameter is something anyone can type. The admin's own chrome
+stays English: what switches is which rows the editor points at, not which language the buttons are
+in. Those two are easy to conflate and expensive to unpick.
 
 **Three decisions inside the guard, each with a cheaper wrong answer:**
 
@@ -215,10 +219,11 @@ exactly those.
 
 - No inquiry form, tour booking, or waitlist
 - No parent accounts, child records, attendance, or billing
-- ~~No second language shipped (only structured for it)~~ — **reversed on #52, 2026-08-30.**
-  German and Italian are being added in `v0.5.0`. The switcher, `hreflang`, sitemap and
-  detection policy shipped in #52; the catalogues follow in #53 and #54. See the note under
-  *After v1*.
+- ~~No second language shipped (only structured for it)~~ — **reversed on #52, 2026-08-30, and
+  shipped.** The switcher, `hreflang`, sitemap and detection policy went out in `v0.5.0` (#52);
+  the German catalogue and the last two untranslatable columns in `v0.6.0` (#53, #123). The site
+  is bilingual in production as of 2026-09-01. Italian (#54) is still a proposal, and by design
+  it is now a one-line change to `routing.locales` plus a catalogue. See the note under *After v1*.
 - No payment provider, no transactional email vendor
 
 Netlify has form handling as a built-in platform primitive, so an inquiry form later needs no
@@ -664,9 +669,10 @@ schema instead of needing a data migration under live child records.
 /admin/*          Staff-only, behind Supabase Auth
 ```
 
-Routes are locale-prefixed (`/[locale]/...`), `en` default and — until #53 or #54 lands — still the
-only shipped locale. The switcher, `hreflang` and per-locale sitemap entries shipped in #52 and are
-gated on `routing.locales.length > 1`, so they are present in the code and invisible on the site.
+Routes are locale-prefixed (`/[locale]/...`), `en` default, with `de` shipped in `v0.6.0` (#53) —
+so `/de/programs` prerenders beside `/en/programs`. The switcher, `hreflang` and per-locale sitemap
+entries shipped in #52 gated on `routing.locales.length > 1`; they were present in the code and
+invisible on the site until `de` was routed, and then appeared without a line being changed.
 There is deliberately **no `Accept-Language` redirect** (#52): it surprises people whose browser
 language is not the one they want to read licensing details in, and a response that varies on a
 request header cannot be a static file at the edge.
@@ -707,7 +713,13 @@ Then: publish GitHub Release `v0.1.0` → production deploys.
 | `v0.2.0` | Remaining static pages: programs, about, staff, tuition, FAQ, contact |
 | `v0.3.0` | Supabase schema, RLS, seed data; content read from the database at build time |
 | `v0.4.0` | Auth and storage: staff login, content editor, prose migration, image upload, publish triggers rebuild |
+| `v0.5.0` | i18n plumbing: locale switcher, `hreflang`, sitemap, content-locale control in the editor |
+| `v0.6.0` | German: the catalogue itself, and the last two columns that could not hold a translation |
 | `v1.0.0` | Launch prep: real content, performance and accessibility pass, legal pages, domain |
+
+Shipped as released, not as planned: `v0.4.0` was published but never deployed (#103) and its
+contents reached production as `v0.4.1`; `v0.5.1` carried #120 on top of `v0.5.0`. The releases
+page is the record — this table is the intent.
 
 ---
 

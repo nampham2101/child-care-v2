@@ -7,29 +7,30 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.4.1` is the released version, live at <https://child-care-v2.netlify.app>.
-All seven public pages — home, `/programs`, `/about`, `/staff`, `/tuition`, `/faq`, `/contact` —
-read their facts and prose from Supabase at build time. Row-level security is on, and the anonymous
-key can read published rows only. Staff log in at `/admin/sign-in`, edit facts and copy, upload
-images of the spaces, and press Publish to rebuild production.
+**Current state:** `v0.6.0` is the released version, live at <https://child-care-v2.netlify.app>
+and deployed 2026-09-01. All seven public pages — home, `/programs`, `/about`, `/staff`,
+`/tuition`, `/faq`, `/contact` — read their facts and prose from Supabase at build time, and
+render in **English and German**: `routing.locales` is `["en", "de"]`, and `/de/*` is prerendered
+beside `/en/*`. Row-level security is on, and the anonymous key can read published rows only.
+Staff log in at `/admin/sign-in`, edit facts and copy in either language, upload images of the
+spaces, and press Publish to rebuild production.
 
 **The `v0.4.0` tag is not a version of this site.** It was published, its release run failed, and
 production stayed on `v0.3.0` for a day (#103). Everything the `v0.4.0` milestone describes reached
 production as `v0.4.1`. Do not treat the `v0.4.0` tag as a rollback target — it never deployed.
 
-**`v0.5.0` is scoped and its work is on `main`, unreleased.** Agreed 2026-08-30: **the i18n
-plumbing only** — #110 (locale-dependent `site_settings` fields moved to `prose`), #111 (content
-locale control in the copy editor), #52 (public switcher, `hreflang`, sitemap). #112 and #115 landed
-alongside it.
+**What the last two releases contained.** `v0.5.0` was the i18n plumbing only, agreed 2026-08-30 —
+#110 (locale-dependent `site_settings` fields moved to `prose`), #111 (content locale control in
+the copy editor), #52 (public switcher, `hreflang`, sitemap), with #112 and #115 alongside;
+`v0.5.1` followed with #120. `v0.6.0` is the language itself: #53 (the German catalogue) and #123
+(the last two untranslatable columns), with #122 alongside.
 
-**German (#53) is built and on a branch, unreleased.** `routing.locales` is `["en", "de"]`, so the
-site is genuinely bilingual: 287 prose rows per locale, `/de/*` prerendered beside `/en/*`, and
-every piece of #52 and #111 that was gated on `routing.locales.length > 1` has lit up by itself —
-the public switcher, `hreflang`, the sitemap's German entries, and the admin's content-locale
-control. Nothing had to be flipped on; that gating was the design paying out.
+Every piece of #52 and #111 that was gated on `routing.locales.length > 1` lit up by itself when
+`de` was routed — the public switcher, `hreflang`, the sitemap's German entries, the admin's
+content-locale control. Nothing had to be flipped on; that gating was the design paying out, and it
+is why **adding Italian (#54) should stay a one-line change to `routing.locales` plus a catalogue.**
 
-**The Italian catalogue (#54) is still a proposal**, as are #27 and #121. Do not start them
-without an assignment.
+**#54, #27, #121, #126 and #127 are all proposals.** Do not start them without an assignment.
 
 **No English string reaches a German page any more.** `programs.age_label` and
 `programs.group_size` were the last two — English sentences in a facts table with no locale, so
@@ -41,7 +42,7 @@ to exclude those strings by name and now asserts against them, across `/de`, `/d
 
 Things that bite the unwary:
 
-- **Prose is in the database and editable** (#76, #77). 287 of the site's 290 strings are rows in
+- **Prose is in the database and editable** (#76, #77). 293 of the site's 296 strings are rows in
   `public.prose`, one per `(locale, namespace, key)` and now doubled across `en` and `de`;
   `messages/<locale>.json` holds only the three chrome strings. Staff edit copy at `/admin/copy`,
   on the same draft-then-publish path as facts. Do not send anyone to `messages/en.json` to change
@@ -190,7 +191,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, who reviews, release policy |
-| GitHub Issues | The task queue. `v0.4.0` is closed and shipped; no milestone is open yet |
+| GitHub Issues | The task queue. Everything through `v0.6.0` is closed and shipped; no milestone is open yet |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
