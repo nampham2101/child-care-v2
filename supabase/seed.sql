@@ -101,24 +101,26 @@ on conflict (org_id) where status = 'published' do update set
 -- band they see must be the youngest. The array order in PROGRAM_BANDS is what carries that
 -- today; here it has to be written down explicitly.
 --
--- The age dashes are en dashes (–), not hyphens, exactly as in lib/programs.ts. They are
--- rendered to the page verbatim.
+-- The age range and the group size used to be columns here. #123 moved them into
+-- public.prose, because they are English sentences rather than facts and this table has no
+-- locale — so a German room card rendered "15 months – 3 years" untranslated. They are seeded
+-- by 20260901021648_move_program_labels_to_prose.sql, in both languages, under the Programs
+-- namespace as <key>Ages and <key>GroupSize. The ratio stayed: "1:4" is "1:4" in every
+-- language, and telling those two kinds of string apart is what that ticket was about.
 
-insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
+insert into public.programs (org_id, key, ratio, sort_order, status)
 select
-  o.id, v.key, v.age_label, v.ratio, v.group_size, v.sort_order,
+  o.id, v.key, v.ratio, v.sort_order,
   'published'::public.content_status
 from public.orgs o
 cross join (values
-  ('infants',   '6 weeks – 15 months', '1:4', '8 children',  1),
-  ('toddlers',  '15 months – 3 years', '1:5', '10 children', 2),
-  ('preschool', '3 – 5 years',         '1:9', '18 children', 3)
-) as v(key, age_label, ratio, group_size, sort_order)
+  ('infants',   '1:4', 1),
+  ('toddlers',  '1:5', 2),
+  ('preschool', '1:9', 3)
+) as v(key, ratio, sort_order)
 where o.slug = 'willow-grove'
 on conflict (org_id, key) where status = 'published' do update set
-  age_label = excluded.age_label,
   ratio = excluded.ratio,
-  group_size = excluded.group_size,
   sort_order = excluded.sort_order,
   status = excluded.status;
 

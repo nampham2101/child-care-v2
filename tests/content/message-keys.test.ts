@@ -58,12 +58,22 @@ test("there is at least one locale to check", () => {
  * `suffixes` are the message names built from the row's key — `maria` needs `mariaRole` and
  * `mariaBio`, while a program band's name is the bare key.
  */
+/**
+ * What the `Programs` namespace holds for one band, and the single place it is written down.
+ *
+ * The bare key is the room's name. `Ages` and `GroupSize` arrived with #123, which moved them
+ * out of `programs` columns because they are English sentences rather than facts and that table
+ * has no locale. Shared with the reverse check below so the two cannot drift: one of them says
+ * every band has these, the other says nothing else is in there.
+ */
+const PROGRAM_SUFFIXES = ["", "Ages", "GroupSize"] as const;
+
 const JOINS = [
   {
     what: "program band",
     keys: async () => (await getProgramBands()).map((band) => band.key),
     expected: [
-      { namespace: "Programs", suffixes: [""] },
+      { namespace: "Programs", suffixes: PROGRAM_SUFFIXES },
       { namespace: "ProgramsPage", suffixes: ["Detail", "Staffing"] },
       { namespace: "HomePage", suffixes: ["Blurb"] },
     ],
@@ -126,6 +136,12 @@ describe.each(JOINS)("every $what key has copy", ({ keys, expected }) => {
  * Only `Programs` and `Day` are checked. The other namespaces hold page furniture — headings,
  * intros, labels — alongside their row-keyed entries, so "every key here belongs to a row" is
  * simply not true of them and asserting it would be noise.
+ *
+ * `Programs` used to be one key per band. Since #123 it is three, and the assertion is built
+ * from `PROGRAM_SUFFIXES` rather than loosened to a prefix match — the property being kept is
+ * that **every** key in this namespace belongs to a row, which is still exactly true, and a
+ * `toEqual` is what makes an orphan visible. Widening it to "starts with a band key" would let
+ * a stray `infantsWhatever` live here forever.
  */
 describe("copy that no database row renders", () => {
   test.each(catalogues)("in $locale", async ({ locale }) => {
@@ -134,7 +150,9 @@ describe("copy that no database row renders", () => {
     const rhythmKeys = (await getDailyRhythm()).map((slot) => slot.labelKey);
 
     expect(Object.keys(messages.Programs ?? {}).sort()).toEqual(
-      [...bandKeys].sort(),
+      bandKeys
+        .flatMap((key) => PROGRAM_SUFFIXES.map((suffix) => `${key}${suffix}`))
+        .sort(),
     );
     expect(Object.keys(messages.Day ?? {}).sort()).toEqual(
       [...rhythmKeys].sort(),

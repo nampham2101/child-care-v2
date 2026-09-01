@@ -126,7 +126,7 @@ test.describe("German pages, cold load", () => {
   }) => {
     await context.clearCookies();
 
-    for (const path of ["/de", "/de/programs", "/de/tuition"]) {
+    for (const path of ["/de", "/de/programs", "/de/about", "/de/tuition"]) {
       await page.goto(path, { waitUntil: "load" });
       const body = await page.locator("body").innerText();
 
@@ -138,17 +138,18 @@ test.describe("German pages, cold load", () => {
        * check was green. They are prose rows now; these assertions are what keeps the next
        * hardcoded string from getting as far.
        *
-       * ## What this list deliberately does NOT cover, and why
+       * `" years"` and `" children"` are the two #123 earned, and they are the reason
+       * `/de/about` joined the loop above: the age ranges and group sizes render on three
+       * pages, and the comparison table on the about page is the third. They were
+       * `programs.age_label` and `programs.group_size` — English sentences in a facts table
+       * with no locale — until that ticket moved them into `prose` as `Programs.<key>Ages`
+       * and `Programs.<key>GroupSize`. This suite excluded them by name until then; the
+       * exclusion is gone and the assertion now covers them.
        *
-       * **The age ranges and group sizes still render in English** — "15 months – 3 years",
-       * "8 children" — because they are `programs.age_label` and `programs.group_size`,
-       * English sentences stored in a facts table with no locale. That is #123: the same
-       * argument #110 made about three `site_settings` columns, one table over, and the same
-       * reason it is not fixed here — it is shared infrastructure that #54 would ride free on.
-       *
-       * So this test asserts what #53 actually delivered rather than what it aimed at, and the
-       * gap is named here instead of hidden behind a passing assertion. **Delete this paragraph
-       * and add `" years"` and `" children"` to the list when #123 lands.**
+       * A leading space on both, deliberately. "children" appears inside German copy on these
+       * pages as part of nothing, but "Kinder" is not what is being looked for — the failure
+       * being caught is the English NUMBER-plus-noun pair, "8 children" and "3 years", so the
+       * space is what keeps this from matching a substring of an unrelated word.
        */
       for (const english of [
         "known by name",
@@ -158,6 +159,8 @@ test.describe("German pages, cold load", () => {
         "6 weeks to 5 years",
         "Call (",
         "7am",
+        " years",
+        " children",
       ]) {
         expect(
           body,

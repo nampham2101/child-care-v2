@@ -140,7 +140,9 @@ export default async function Home({
                   {band.ratio}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-ink-500">{band.ageLabel}</p>
+              <p className="mt-1 text-sm text-ink-500">
+                {tBands(`${band.key}Ages`)}
+              </p>
               <p className="mt-3 text-ink-700">{t(`${band.key}Blurb`)}</p>
             </article>
           ))}

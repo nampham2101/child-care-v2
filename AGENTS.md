@@ -28,15 +28,16 @@ every piece of #52 and #111 that was gated on `routing.locales.length > 1` has l
 the public switcher, `hreflang`, the sitemap's German entries, and the admin's content-locale
 control. Nothing had to be flipped on; that gating was the design paying out.
 
-**The Italian catalogue (#54) is still a proposal**, as are #27 and #123. Do not start them without
-an assignment.
+**The Italian catalogue (#54) is still a proposal**, as are #27 and #121. Do not start them
+without an assignment.
 
-**One English string still reaches a German page, knowingly.** `programs.age_label` and
-`programs.group_size` hold English sentences in a facts table with no locale — "15 months – 3
-years", "8 children" — so they render untranslated. That is **#123**, the same argument #110 made
-about `site_settings`, and it is deliberately outside #53 for the reason #110 was carved out in the
-first place: shared infrastructure that #54 would otherwise ride free on.
-`tests/e2e/german.spec.ts` names #123 where it excludes those strings.
+**No English string reaches a German page any more.** `programs.age_label` and
+`programs.group_size` were the last two — English sentences in a facts table with no locale, so
+"15 months – 3 years" and "8 children" rendered untranslated inside German room cards. **#123**
+moved them into `prose` under the `Programs` namespace as `<key>Ages` and `<key>GroupSize`, in
+both languages; `ratio` stayed, because "1:4" is "1:4" everywhere. `tests/e2e/german.spec.ts` used
+to exclude those strings by name and now asserts against them, across `/de`, `/de/programs`,
+`/de/about` and `/de/tuition`.
 
 Things that bite the unwary:
 
@@ -50,10 +51,14 @@ Things that bite the unwary:
   indistinguishable from catalogue rows while `en` was the only locale, and untranslatable the
   moment `de` landed. They are rows now. The test before writing any user-facing text in a
   component: *would a German page show this?* If yes, it is a row.
-- **`site_settings` holds facts, never sentences** (#110). The ages, opening hours and neighbourhood
-  used to live there and are now `prose` rows under the `Center` namespace, because they are English
-  sentences interpolated into other sentences. The test before adding a field there: *would this
-  string be identical in German?* If not, it is copy and belongs in `prose`.
+- **A facts table holds facts, never sentences** (#110, #123). The ages, opening hours and
+  neighbourhood used to live on `site_settings`; the age range and group size used to live on
+  `programs`. All five are `prose` rows now — under `Center` and `Programs` — because they are
+  English sentences, and two of them are interpolated into other sentences. The test before adding
+  a text column to any content table: *would this string be identical in German?* If not, it is
+  copy and belongs in `prose`. Note that this splits a table's columns rather than moving whole
+  tables: `programs.ratio` stayed exactly where it was, and that is the point rather than a
+  compromise.
 - **A `{placeholder}` is load-bearing.** Twenty strings interpolate a value at render time, and
   next-intl throws on a message missing one — which now fails the build. `FieldReader.prose` is what
   stops a staff member deleting one; do not weaken it. Since #111 the required set for a

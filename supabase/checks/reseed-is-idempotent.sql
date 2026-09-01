@@ -95,8 +95,12 @@ create temp table seed_before as
 -- well as a draft program, because the two exercise different things: the program is a plain
 -- twin, and the schedule is a second join match for the tuition_rates statement, which would
 -- write extra published rates pointing at a draft parent if the join stopped filtering.
-insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
-select o.id, 'infants', 'DRAFT EDIT in flight', '1:3', '6 children', 1, 'draft'
+-- The marker moved from `age_label` to `ratio` when #123 dropped that column. `ratio` is the
+-- only free text column left on this table, and it is still the right place for the probe: the
+-- seed rewrites it, so a draft that survives with this value proves the conflict target really
+-- is the published index.
+insert into public.programs (org_id, key, ratio, sort_order, status)
+select o.id, 'infants', 'DRAFT EDIT in flight', 1, 'draft'
 from public.orgs o where o.slug = 'willow-grove';
 
 insert into public.tuition_schedules (org_id, key, sort_order, status)
@@ -167,7 +171,7 @@ begin
   end if;
 
   -- 4. The draft twins are untouched, because the conflict target is the published index.
-  select p.age_label into draft_label
+  select p.ratio into draft_label
     from public.programs p join public.orgs o on o.id = p.org_id
    where o.slug = 'willow-grove' and p.key = 'infants' and p.status = 'draft';
 

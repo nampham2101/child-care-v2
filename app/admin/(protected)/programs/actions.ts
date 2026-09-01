@@ -32,11 +32,9 @@ export async function savePrograms(
   const programEdits = programKeys.map((key) => ({
     key,
     values: {
-      age_label: reader.text(`age_label__${key}`, "Ages in this room", {
-        max: 60,
-      }),
+      // The ages and the group size used to be read here. #123 moved them into `prose` —
+      // they are sentences, not facts, and this table has no locale.
       ratio: reader.text(`ratio__${key}`, "Ratio", { max: 20 }),
-      group_size: reader.text(`group_size__${key}`, "Group size", { max: 40 }),
       sort_order: reader.integer(`sort_order__${key}`, "Order on the page", {
         min: 0,
         max: 999,
@@ -73,9 +71,7 @@ export async function savePrograms(
       if (!current) continue;
 
       const unchanged =
-        current.ageLabel === edit.values.age_label &&
         current.ratio === edit.values.ratio &&
-        current.groupSize === edit.values.group_size &&
         current.sortOrder === edit.values.sort_order;
       if (unchanged) continue;
 

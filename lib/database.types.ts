@@ -157,9 +157,7 @@ export type Database = {
       }
       programs: {
         Row: {
-          age_label: string
           created_at: string
-          group_size: string
           id: string
           key: string
           org_id: string
@@ -169,9 +167,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          age_label: string
           created_at?: string
-          group_size: string
           id?: string
           key: string
           org_id: string
@@ -181,9 +177,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          age_label?: string
           created_at?: string
-          group_size?: string
           id?: string
           key?: string
           org_id?: string

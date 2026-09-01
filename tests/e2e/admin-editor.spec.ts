@@ -315,9 +315,10 @@ test.describe("the facts editor", () => {
      * assertion is both that the label appears and that the column does not.
      */
     await expect(page.getByText("Ratio cannot be empty.")).toBeVisible();
-    await expect(page.getByText(/age_label|group_size|sort_order/)).toHaveCount(
-      0,
-    );
+    // `age_label` and `group_size` were in this list until #123 dropped the columns. Naming a
+    // column that no longer exists would make the assertion pass for the wrong reason, so what
+    // is left is what this form can actually leak.
+    await expect(page.getByText(/ratio|sort_order/)).toHaveCount(0);
   });
 
   /**

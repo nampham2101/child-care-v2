@@ -71,14 +71,19 @@ const UNIQUE_VIOLATION = "23505";
 let fixtureOrgId: string;
 let willowGroveOrgId: string;
 
-/** The columns `programs` needs beyond the ones under test. */
-function programRow(status: "draft" | "published", ageLabel: string) {
+/**
+ * The columns `programs` needs beyond the ones under test.
+ *
+ * The distinguishing text is carried in `ratio` rather than `age_label`, which #123 dropped:
+ * the age range and the group size are sentences, so they are `prose` rows now, and `ratio` is
+ * the only free text column this table has left. What the twin tests need is any column whose
+ * value can differ between the two rows, so which one it is does not matter here.
+ */
+function programRow(status: "draft" | "published", marker: string) {
   return {
     org_id: fixtureOrgId,
     key: TWIN_KEY,
-    age_label: ageLabel,
-    ratio: "9:9",
-    group_size: "0 children",
+    ratio: marker,
     sort_order: 905,
     status,
   };
@@ -138,14 +143,14 @@ describe("a keyed table holds a draft beside its published twin", () => {
 
     const owned = await member
       .from("programs")
-      .select("status, age_label")
+      .select("status, ratio")
       .eq("key", TWIN_KEY)
       .order("status");
 
     expect(owned.error).toBeNull();
     expect(owned.data).toEqual([
-      { status: "draft", age_label: "FIXTURE twin — edited, not yet live" },
-      { status: "published", age_label: "FIXTURE twin — published" },
+      { status: "draft", ratio: "FIXTURE twin — edited, not yet live" },
+      { status: "published", ratio: "FIXTURE twin — published" },
     ]);
 
     /*
@@ -156,12 +161,12 @@ describe("a keyed table holds a draft beside its published twin", () => {
      */
     const public_ = await visitor
       .from("programs")
-      .select("status, age_label")
+      .select("status, ratio")
       .eq("key", TWIN_KEY);
 
     expect(public_.error).toBeNull();
     expect(public_.data).toEqual([
-      { status: "published", age_label: "FIXTURE twin — published" },
+      { status: "published", ratio: "FIXTURE twin — published" },
     ]);
   });
 
@@ -267,9 +272,7 @@ describe("the constraints the migration did not weaken still hold", () => {
     const { error } = await member.from("programs").insert({
       org_id: willowGroveOrgId,
       key: "infants",
-      age_label: "must never exist",
-      ratio: "9:9",
-      group_size: "0 children",
+      ratio: "must never exist",
       sort_order: 906,
       status: "draft",
     });

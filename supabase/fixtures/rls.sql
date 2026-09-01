@@ -119,26 +119,27 @@ on conflict (id) do update set
 --
 -- Verified by running it twice; the second run updated both rows in place.
 
-insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
-select o.id, 'rlsFixtureDraft', 'FIXTURE draft — must never be visible', '9:9', '0 children', 901,
+-- `ratio` carries the "must never be visible" marker since #123 dropped `age_label`. It is the
+-- only free text column left on this table, and the tests that read these rows assert on the
+-- marker rather than on a plausible-looking ratio, so a leak across the organization boundary
+-- is still unmistakable in a failure message.
+
+insert into public.programs (org_id, key, ratio, sort_order, status)
+select o.id, 'rlsFixtureDraft', 'FIXTURE draft — must never be visible', 901,
        'draft'::public.content_status
 from public.orgs o
 where o.slug = 'rls-fixture'
 on conflict (org_id, key) where status = 'draft' do update set
-  age_label = excluded.age_label,
   ratio = excluded.ratio,
-  group_size = excluded.group_size,
   sort_order = excluded.sort_order;
 
-insert into public.programs (org_id, key, age_label, ratio, group_size, sort_order, status)
-select o.id, 'rlsFixturePublished', 'FIXTURE published — other org, not ours', '9:9', '0 children', 902,
+insert into public.programs (org_id, key, ratio, sort_order, status)
+select o.id, 'rlsFixturePublished', 'FIXTURE published — other org, not ours', 902,
        'published'::public.content_status
 from public.orgs o
 where o.slug = 'rls-fixture'
 on conflict (org_id, key) where status = 'published' do update set
-  age_label = excluded.age_label,
   ratio = excluded.ratio,
-  group_size = excluded.group_size,
   sort_order = excluded.sort_order;
 
 -- ---------------------------------------------------------------------------------------
