@@ -1,15 +1,22 @@
 /**
  * The three age bands and the shape of a day here, read from the database at build time.
  *
- * Ratios and ages are the numbers a parent writes down when comparing centers, and they
- * appear in four places — the home page's summary cards, `/programs`, `/about`, and the
- * tuition rate table. A ratio that says 1:4 on one page and 1:5 on another is worse than no
- * ratio at all, so the numbers are fetched once here and every page reads them, the same way
- * `@/lib/center` owns the license number.
+ * The ratio is the number a parent writes down when comparing centers, and it appears in four
+ * places — the home page's summary cards, `/programs`, `/about`, and the tuition rate table. A
+ * ratio that says 1:4 on one page and 1:5 on another is worse than no ratio at all, so it is
+ * fetched once here and every page reads it, the same way `@/lib/center` owns the license
+ * number.
  *
- * Only facts live here. The visible prose — band names, the label on each clock time — lives
- * under the `Programs` and `Day` namespaces of the message catalogue, keyed by the `key` and
- * `labelKey` fields below, so the copy is translatable while the numbers stay a fact.
+ * Only facts live here, and since #123 that is finally true of this table. It used to carry
+ * the age range and the group size as well — '6 weeks – 15 months', '8 children' — which are
+ * English sentences rather than facts, and `programs` has no locale, so a German room card
+ * rendered them untranslated. They are `prose` rows now, under the same `Programs` namespace
+ * as the band's name and keyed `${key}Ages` and `${key}GroupSize`. `ratio` stayed: '1:4' is
+ * '1:4' in every language, and telling those apart is the whole point.
+ *
+ * The visible prose — band names, the ages, the group size, the label on each clock time —
+ * lives under the `Programs` and `Day` namespaces of the message catalogue, keyed by the `key`
+ * and `labelKey` fields below, so the copy is translatable while the numbers stay a fact.
  *
  * **That catalogue is the database, not a JSON file** (#76). `@/lib/prose` reads `public.prose`
  * at build time and hands it to next-intl, so a `t("Programs.infants")` call site is unchanged
@@ -26,11 +33,13 @@ import { cache } from "react";
 import { CENTER_ORG_SLUG, requireRows } from "@/lib/content";
 
 export type ProgramBand = {
-  /** Joins to the `Programs` namespace of the catalogue — a `public.prose` row since #76. */
+  /**
+   * Joins to the `Programs` namespace of the catalogue — a `public.prose` row since #76, and
+   * since #123 three rows rather than one: the room's name, `${key}Ages`, and
+   * `${key}GroupSize`.
+   */
   key: string;
-  ageLabel: string;
   ratio: string;
-  groupSize: string;
 };
 
 export type DailyRhythmSlot = {
@@ -63,17 +72,12 @@ export const getProgramBands = cache(async (): Promise<ProgramBand[]> => {
 
   const { data, error } = await supabase
     .from("programs")
-    .select("key, age_label, ratio, group_size, orgs!inner (slug)")
+    .select("key, ratio, orgs!inner (slug)")
     .eq("orgs.slug", CENTER_ORG_SLUG)
     .order("sort_order");
 
   return requireRows(data, error, "Could not read program bands").map(
-    (row) => ({
-      key: row.key,
-      ageLabel: row.age_label,
-      ratio: row.ratio,
-      groupSize: row.group_size,
-    }),
+    (row) => ({ key: row.key, ratio: row.ratio }),
   );
 });
 

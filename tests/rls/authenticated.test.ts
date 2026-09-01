@@ -161,9 +161,7 @@ describe("a member writes its own organization's rows", () => {
       .insert({
         org_id: fixtureOrgId,
         key: SCRATCH_KEY,
-        age_label: "FIXTURE scratch — written by the RLS suite",
-        ratio: "9:9",
-        group_size: "0 children",
+        ratio: "FIXTURE scratch — written by the RLS suite",
         sort_order: 903,
       })
       .select("key, status");
@@ -205,9 +203,7 @@ describe("a member is refused on another organization's rows", () => {
     const { error } = await member.from("programs").insert({
       org_id: willowGroveOrgId,
       key: "rlsFixtureIntruder",
-      age_label: "must never exist",
-      ratio: "9:9",
-      group_size: "0 children",
+      ratio: "must never exist",
       sort_order: 904,
     });
 

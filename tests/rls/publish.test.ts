@@ -61,9 +61,7 @@ function program(
   return {
     org_id: fixtureOrgId,
     key,
-    age_label: "FIXTURE publish probe",
     ratio,
-    group_size: "0 children",
     sort_order: sortOrder,
     status,
   };
@@ -290,12 +288,7 @@ const COVERAGE: CoverageSpec[] = [
     table: "programs",
     identity: { key: `${COVER_KEY}Program` },
     field: "ratio",
-    row: (marker) => ({
-      age_label: "FIXTURE coverage probe",
-      ratio: marker,
-      group_size: "0 children",
-      sort_order: 981,
-    }),
+    row: (marker) => ({ ratio: marker, sort_order: 981 }),
   },
   {
     table: "daily_rhythm",
@@ -341,9 +334,7 @@ const COVERAGE: CoverageSpec[] = [
       await loose.from("programs").insert({
         org_id: fixtureOrgId,
         key: `${COVER_KEY}RateProgram`,
-        age_label: "FIXTURE coverage probe",
         ratio: "9:9",
-        group_size: "0 children",
         sort_order: 987,
         status: "published",
       });

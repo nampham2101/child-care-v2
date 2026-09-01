@@ -55,11 +55,15 @@ export type EditableCenter = Pending & {
   addressLine2: string;
 };
 
+/**
+ * A room's facts. The age range and the group size are deliberately NOT here — #123 moved them
+ * into `public.prose` for the reason #110 moved the center's three, one table over: they are
+ * English sentences rather than facts, and `programs` has no locale, so a German room card
+ * rendered them untranslated. They are edited in the copy editor now, under "Rooms".
+ */
 export type EditableProgram = Pending & {
   key: string;
-  ageLabel: string;
   ratio: string;
-  groupSize: string;
   sortOrder: number;
 };
 
@@ -151,9 +155,7 @@ export async function getEditablePrograms(): Promise<EditableProgram[]> {
   return byKey(twins, (row) => str(row.key))
     .map(({ key, row, hasDraft: pending }) => ({
       key,
-      ageLabel: str(row.age_label),
       ratio: str(row.ratio),
-      groupSize: str(row.group_size),
       sortOrder: num(row.sort_order),
       hasDraft: pending,
     }))

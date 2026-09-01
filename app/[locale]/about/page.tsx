@@ -180,13 +180,13 @@ export default async function About({ params }: PageProps) {
                     {tBands(band.key)}
                   </th>
                   <td className="py-4 pr-4 text-ink-700 tabular-nums sm:pr-6">
-                    {band.ageLabel}
+                    {tBands(`${band.key}Ages`)}
                   </td>
                   <td className="py-4 pr-4 text-ink-900 tabular-nums sm:pr-6">
                     {band.ratio}
                   </td>
                   <td className="py-4 pr-4 whitespace-nowrap text-ink-700 tabular-nums sm:pr-6">
-                    {band.groupSize}
+                    {tBands(`${band.key}GroupSize`)}
                   </td>
                 </tr>
               ))}

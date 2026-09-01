@@ -92,9 +92,9 @@ export const PROSE_GROUPS: readonly ProseGroup[] = [
   {
     slug: "rooms",
     namespace: "Programs",
-    label: "Room names",
+    label: "Room names, ages and sizes",
     where:
-      "What the three rooms are called, everywhere they appear. Short — these are names, not descriptions.",
+      "What the three rooms are called, the ages in each, and how many children — everywhere those appear, which is the home page, the programs page and the table on the about page. The ratio is on the “Rooms and the day” editor instead, because “1:4” is “1:4” in every language.",
   },
   {
     slug: "day",

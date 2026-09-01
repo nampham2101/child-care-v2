@@ -89,7 +89,7 @@ export default async function Programs({ params }: PageProps) {
           <HeroFacts
             facts={bands.map((band) => ({
               label: tBands(band.key),
-              value: `${band.ratio} · ${band.groupSize}`,
+              value: `${band.ratio} · ${tBands(`${band.key}GroupSize`)}`,
             }))}
           />
         }
@@ -113,7 +113,9 @@ export default async function Programs({ params }: PageProps) {
               >
                 {tBands(band.key)}
               </h2>
-              <p className="mt-1 text-sm text-ink-500">{band.ageLabel}</p>
+              <p className="mt-1 text-sm text-ink-500">
+                {tBands(`${band.key}Ages`)}
+              </p>
 
               {/*
                * The room itself, when there is a photograph of it. Rendered between the ages
@@ -144,8 +146,11 @@ export default async function Programs({ params }: PageProps) {
             <dl className="h-fit rounded-2xl border border-border bg-surface p-6">
               {[
                 { label: t("factRatio"), value: band.ratio },
-                { label: t("factGroup"), value: band.groupSize },
-                { label: t("factAges"), value: band.ageLabel },
+                {
+                  label: t("factGroup"),
+                  value: tBands(`${band.key}GroupSize`),
+                },
+                { label: t("factAges"), value: tBands(`${band.key}Ages`) },
               ].map((fact) => (
                 <div key={fact.label} className="not-first:mt-4">
                   <dt className="text-sm font-medium text-ink-500">

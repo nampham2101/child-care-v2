@@ -55,23 +55,15 @@ export default async function ProgramsPage() {
                     never shown and never editable — see lib/admin/labels.ts. */}
                 <input type="hidden" name="program_key" value={program.key} />
 
-                <Field
-                  name={`age_label__${program.key}`}
-                  label="Ages in this room"
-                  hint="For example “6 weeks – 18 months”."
-                  defaultValue={program.ageLabel}
-                />
+                {/* The ages and the group size were two more fields here until #123. They
+                    are sentences rather than numbers — "6 weeks – 15 months", "8 children" —
+                    so they are `prose` rows now and are edited under Copy → Rooms, in
+                    whichever language the editor is set to. */}
                 <Field
                   name={`ratio__${program.key}`}
                   label="Ratio"
-                  hint="Caregivers to children, written the way it should appear — for example “1:4”."
+                  hint="Caregivers to children, written the way it should appear — for example “1:4”. The same in every language, which is why it is here and the ages are in Copy."
                   defaultValue={program.ratio}
-                />
-                <Field
-                  name={`group_size__${program.key}`}
-                  label="Group size"
-                  hint="For example “8 children”."
-                  defaultValue={program.groupSize}
                 />
                 <Field
                   name={`sort_order__${program.key}`}
