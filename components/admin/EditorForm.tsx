@@ -44,6 +44,28 @@ export function EditorForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
+      {/*
+       * Pressing Enter in a text field submits the form using the FIRST submit button in tree
+       * order as the submitter. Since #121 that would be a section's Discard button, which sits
+       * above the fields — so typing a value and pressing Enter would ask to throw the edit away
+       * instead of saving it. Nothing would be lost (the first press only asks), but it is a
+       * baffling thing for the interface to do.
+       *
+       * This claims that position for Save. `aria-hidden` and `tabIndex={-1}` keep it out of the
+       * accessibility tree and the tab order, so it is invisible to a screen reader, to the
+       * keyboard, and to `getByRole` — while still being the button the browser reaches for.
+       * It is not `display: none`, because a button that is not rendered is not reliably chosen
+       * as the default submitter.
+       */}
+      <button
+        type="submit"
+        aria-hidden="true"
+        tabIndex={-1}
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+      >
+        Save draft
+      </button>
+
       <FieldErrorContext.Provider value={state.fieldErrors ?? {}}>
         <DiscardConfirmContext.Provider value={state.confirming ?? null}>
           {children}
