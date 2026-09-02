@@ -119,13 +119,24 @@ on conflict (id) do update set
 --
 -- Verified by running it twice; the second run updated both rows in place.
 
--- `ratio` carries the "must never be visible" marker since #123 dropped `age_label`. It is the
--- only free text column left on this table, and the tests that read these rows assert on the
--- marker rather than on a plausible-looking ratio, so a leak across the organization boundary
--- is still unmistakable in a failure message.
+-- `ratio` carries the marker since #123 dropped `age_label`. It is the only free text column
+-- left on this table, so a leak across the organization boundary is still unmistakable in a
+-- failure message.
+--
+-- **The marker is short, and it has to be.** #121 found out the hard way: `savePrograms`
+-- validates a ratio at 20 characters, so the "FIXTURE draft — must never be visible" this file
+-- used to write is a value the editor itself refuses. The end-to-end suite posts every program's
+-- ratio on a save, so one over-long fixture row failed a save test that had nothing to do with
+-- the fixture. That was latent from #123 until #121 wrote the value to the shared database for
+-- the first time.
+--
+-- `rlsFixturePublished` is `9:9` deliberately, and not a marker at all: `tests/e2e/admin-editor.spec.ts`
+-- edits that row and restores it to `9:9`, so anything else here would disagree with the suite the
+-- moment this file is applied. The `rlsFixture*` KEY is what identifies these rows; the ratio only
+-- has to be recognisable and valid.
 
 insert into public.programs (org_id, key, ratio, sort_order, status)
-select o.id, 'rlsFixtureDraft', 'FIXTURE draft — must never be visible', 901,
+select o.id, 'rlsFixtureDraft', 'FIXTURE draft', 901,
        'draft'::public.content_status
 from public.orgs o
 where o.slug = 'rls-fixture'
@@ -134,7 +145,7 @@ on conflict (org_id, key) where status = 'draft' do update set
   sort_order = excluded.sort_order;
 
 insert into public.programs (org_id, key, ratio, sort_order, status)
-select o.id, 'rlsFixturePublished', 'FIXTURE published — other org, not ours', 902,
+select o.id, 'rlsFixturePublished', '9:9', 902,
        'published'::public.content_status
 from public.orgs o
 where o.slug = 'rls-fixture'

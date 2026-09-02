@@ -66,13 +66,17 @@ if (!TEST_PASSWORD && process.env.CI) {
 const DRAFT_KEY = "rlsFixtureDraft";
 
 /**
- * Its ratio, which is also the marker `supabase/fixtures/rls.sql` gives it.
+ * Its ratio, matching `supabase/fixtures/rls.sql`.
  *
  * Named here because `restoreFixtureState` may have to **recreate** this row rather than update
- * it since #121 — see the note there — and a recreated row has to come back with the text the
- * other suites assert on.
+ * it since #121 — see the note there — and a recreated row has to come back as the fixture file
+ * would have written it.
+ *
+ * **Short on purpose.** `savePrograms` caps a ratio at 20 characters and this suite posts every
+ * program's ratio on a save, so a longer marker here fails the save test two blocks up rather
+ * than anything to do with the fixture. The fixture file explains it at more length.
  */
-const FIXTURE_DRAFT_RATIO = "FIXTURE draft — must never be visible";
+const FIXTURE_DRAFT_RATIO = "FIXTURE draft";
 
 /**
  * The fixture organization's prose, added by #77 in `supabase/fixtures/rls.sql`.
