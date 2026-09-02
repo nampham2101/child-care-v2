@@ -107,6 +107,43 @@ owner's explicit approval — but two things differ from `db push` and both matt
   unapplied and try to run it again. (Every migration here should be re-runnable anyway — but a
   history that disagrees with the repository is a trap for whoever reads it next.)
 
+**That rename is not optional and it has been missed.** #53 applied
+`move_hardcoded_strings_to_prose` through the connector, which stamped `20260831033713` while the
+file said `20260831040000`. The two disagreed for two days until #127 renamed the file. Nothing
+reported it, and nothing could — see below.
+
+So the last step of applying through the connector is to **list the applied versions and compare
+them to the filenames**, before the pull request is opened:
+
+```bash
+ls supabase/migrations/*.sql | xargs -n1 basename
+```
+
+Read that against `schema_migrations` — the connector's own migration listing is the easiest
+source — and rename any file whose version does not match. Renaming is always the correct
+direction: the database's version is what `db push` compares against, and it is the side that
+cannot move without rewriting history.
+
+**Check the replay order did not change**, since a rename moves a file in the sequence. #127's moved
+from `…040000` to `…033713`, which still sorts after `…033003`, so nothing reordered. Had it crossed
+a neighbour, the repository would replay in a different order than the hosted project did — which is
+a far worse problem than the mismatch being fixed.
+
+### Why CI cannot check this for you
+
+Verified rather than assumed, on #127:
+
+- **The anonymous key cannot read `supabase_migrations`.** It is not an exposed schema; PostgREST
+  answers `406`. That is the only database credential CI holds.
+- **A Supabase personal access token could**, and is deliberately kept out of CI. A PAT can create
+  and delete projects; standing one up in a public repository's Actions to catch a filename typo
+  buys a small check for a large blast radius.
+
+`scripts/migration-filenames.test.mjs` covers what *can* be checked without a credential — that no
+two migrations share a version, which would mean one of them silently never runs — and says in its
+own header that it does not cover the drift. A guard that looks like it covers something and does
+not is worse than no guard.
+
 ## Regenerating the types
 
 `lib/database.types.ts` is generated from the live schema and committed, so that a query
