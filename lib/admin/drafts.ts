@@ -106,6 +106,12 @@ type LooseClient = {
     insert(values: Record<string, unknown>): PromiseLike<{
       error: { message: string; code?: string } | null;
     }>;
+    delete(): {
+      eq(
+        column: "id",
+        value: string,
+      ): PromiseLike<{ error: { message: string; code?: string } | null }>;
+    };
   };
 };
 
@@ -239,6 +245,80 @@ export async function saveOrCreateDraft(
     .insert({ ...defaults, ...identity, ...changes, status: "draft" });
 
   if (error) throw toDraftError(error, table);
+}
+
+/**
+ * What discarding one pending edit turned out to mean.
+ *
+ * The two cases are ADR 0001's promote cases in mirror image, and they are **different sentences
+ * on screen** rather than an implementation detail:
+ *
+ *   - `reverted` — the draft had a published twin. Deleting it restores the published value as
+ *     the effective one. This is the ordinary case and it destroys only the edit.
+ *   - `removed` — the draft had no published twin, so it was the thing itself. Deleting it
+ *     deletes the content. Today the only way to reach this is a photograph added through
+ *     `saveOrCreateDraft`; every other section goes through `saveDraft`, which refuses to create.
+ *
+ * The caller words the confirmation and the result from this, which is why it is returned rather
+ * than logged. Telling someone "your change was discarded" when the photograph itself is gone
+ * would be the editor lying about what it just did.
+ */
+export type DiscardOutcome = "reverted" | "removed";
+
+/**
+ * Delete the pending draft for one thing, leaving its published twin exactly as it was.
+ *
+ * ## The published row is not read, written, or touched
+ *
+ * Only the row whose `status` is `draft` is deleted, by its own `id`. That is the whole
+ * operation. `lib/admin/drafts.ts` has always promised the published row is untouched until
+ * someone presses Publish, and discard is the one place that promise could plausibly be broken
+ * by an off-by-one predicate — so it is asserted in `tests/rls/discard.test.ts` rather than
+ * argued for here.
+ *
+ * ## Why it refuses when there is no draft
+ *
+ * Reaching that means the button was rendered for something with nothing pending, or two people
+ * discarded the same edit and this is the second. Deleting nothing and reporting success would
+ * be indistinguishable from the first case; saying so lets the caller tell the person to reload.
+ *
+ * **It cannot delete a published row even if asked to.** There is no code path here that selects
+ * one, so a crafted request naming a table and identity whose only row is published finds no
+ * draft and is refused. Row-level security independently scopes every query to the signed-in
+ * member's organization, so the identity cannot reach another tenant's rows either.
+ *
+ * ## What this does NOT do
+ *
+ * It does not touch storage. A discarded draft photograph leaves its uploaded object in the
+ * bucket, and removing that is the caller's job — see `app/admin/(protected)/photos/actions.ts`,
+ * which does it after this returns and explains why in that order.
+ */
+export async function discardDraft(
+  supabase: SupabaseClient<Database>,
+  table: DraftableTable,
+  identity: Record<string, string>,
+): Promise<{ outcome: DiscardOutcome; draft: DraftableRow }> {
+  const loose = supabase as unknown as LooseClient;
+  const twins = await readTwins(supabase, table, identity);
+
+  const draft = twins.find((row) => row.status === "draft");
+  if (!draft) {
+    throw new DraftError(
+      "There is no unpublished edit here to discard. Someone may have published or discarded " +
+        "it already — reload the page to see where things stand.",
+    );
+  }
+
+  const outcome: DiscardOutcome = twins.some(
+    (row) => row.status === "published",
+  )
+    ? "reverted"
+    : "removed";
+
+  const { error } = await loose.from(table).delete().eq("id", draft.id);
+  if (error) throw toDraftError(error, table);
+
+  return { outcome, draft };
 }
 
 function toDraftError(

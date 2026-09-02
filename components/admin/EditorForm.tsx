@@ -18,6 +18,19 @@ import { IDLE, type SaveState } from "@/lib/admin/form-state";
  */
 export const FieldErrorContext = createContext<Record<string, string>>({});
 
+/**
+ * The discard awaiting a second press, if there is one (#121).
+ *
+ * A context rather than a prop because the control sits inside `children`, which every editor
+ * renders as ordinary server markup — threading state down through six pages' worth of sections
+ * would mean making all of them client components. `FieldErrorContext` beside it exists for the
+ * same reason and reaches `Field` the same way.
+ */
+export const DiscardConfirmContext = createContext<{
+  target: string;
+  prompt: string;
+} | null>(null);
+
 export function EditorForm({
   action,
   children,
@@ -31,8 +44,32 @@ export function EditorForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
+      {/*
+       * Pressing Enter in a text field submits the form using the FIRST submit button in tree
+       * order as the submitter. Since #121 that would be a section's Discard button, which sits
+       * above the fields — so typing a value and pressing Enter would ask to throw the edit away
+       * instead of saving it. Nothing would be lost (the first press only asks), but it is a
+       * baffling thing for the interface to do.
+       *
+       * This claims that position for Save. `aria-hidden` and `tabIndex={-1}` keep it out of the
+       * accessibility tree and the tab order, so it is invisible to a screen reader, to the
+       * keyboard, and to `getByRole` — while still being the button the browser reaches for.
+       * It is not `display: none`, because a button that is not rendered is not reliably chosen
+       * as the default submitter.
+       */}
+      <button
+        type="submit"
+        aria-hidden="true"
+        tabIndex={-1}
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+      >
+        Save draft
+      </button>
+
       <FieldErrorContext.Provider value={state.fieldErrors ?? {}}>
-        {children}
+        <DiscardConfirmContext.Provider value={state.confirming ?? null}>
+          {children}
+        </DiscardConfirmContext.Provider>
       </FieldErrorContext.Provider>
 
       <div className="flex flex-wrap items-center gap-4 border-t border-border pt-6">

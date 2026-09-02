@@ -13,6 +13,18 @@ export type SaveState = {
   message?: string;
   /** Keyed by form field name, so an input can render its own problem beneath it. */
   fieldErrors?: Record<string, string>;
+  /**
+   * A destructive action waiting for a second press — today only discard (#121).
+   *
+   * The two-step lives in the returned state rather than in a browser dialog on purpose.
+   * `EditorForm` is written to work before JavaScript has loaded, and a `window.confirm` that
+   * is simply absent in that state would leave the one irreversible control in the editor a
+   * single click away with no gate at all. A round trip is a real gate in both cases.
+   *
+   * `target` is the encoded thing being acted on, so the control that asked can recognise its
+   * own prompt and no other section renders one.
+   */
+  confirming?: { target: string; prompt: string };
 };
 
 export const IDLE: SaveState = { status: "idle" };

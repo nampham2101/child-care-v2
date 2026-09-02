@@ -89,6 +89,11 @@ export default async function TuitionPage() {
               title="The other numbers"
               description="What a rate sheet usually leaves out and a parent finds at signing. They sit in the hero for that reason."
               pending={fees.hasDraft}
+              discard={{
+                table: "tuition_fees",
+                identity: {},
+                label: "the registration and other fees",
+              }}
             >
               <Field
                 name="registration"

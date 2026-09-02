@@ -60,6 +60,11 @@ export default async function StaffPage() {
                     : `${role.text} · ${yearsWith(person)} years here`
                 }
                 pending={person.hasDraft}
+                discard={{
+                  table: "staff",
+                  identity: { key: person.key },
+                  label: person.name || role.text,
+                }}
               >
                 <input type="hidden" name="staff_key" value={person.key} />
 

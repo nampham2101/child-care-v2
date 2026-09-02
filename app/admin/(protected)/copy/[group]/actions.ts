@@ -8,6 +8,7 @@ import {
   resolveContentLocale,
 } from "@/lib/admin/content-locale";
 import { DraftError, saveDraft } from "@/lib/admin/drafts";
+import { maybeDiscard } from "@/lib/admin/discard-request";
 import { getEditableProse } from "@/lib/admin/editable";
 import { failed, invalid, saved, type SaveState } from "@/lib/admin/form-state";
 import { groupBySlug, proseLimitFor } from "@/lib/admin/prose-groups";
@@ -53,6 +54,15 @@ export async function saveProse(
   _previous: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
+  /*
+   * Discard first, before anything is read or validated (#121). A staff member who typed
+   * something the form refuses is exactly the person most likely to want the edit gone, and a
+   * discard blocked by "one field needs fixing" would be absurd when the fields are what is
+   * being thrown away. Returns null when this submission is an ordinary save.
+   */
+  const discarded = await maybeDiscard(formData);
+  if (discarded) return discarded;
+
   const slug = String(formData.get("group_slug") ?? "");
   const group = groupBySlug(slug);
   if (!group) {
