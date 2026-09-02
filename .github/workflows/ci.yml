@@ -189,6 +189,22 @@ jobs:
       # application, and the state the check below measures from.
       - run: npx supabase db reset
 
+      # Does the database `db reset` just built actually hold a site? (#126)
+      #
+      # This runs BEFORE the re-apply check below, and the order is the point: it measures what
+      # one clean pass of migrations-then-seed produces, which is exactly what a restore is.
+      # Running it after the re-applications would measure a database that had been seeded three
+      # times, and could pass on state the second and third passes put there.
+      #
+      # Until #126 this job proved the files could be RE-RUN and nothing proved the result was
+      # usable. It was not: every prose migration is scoped `where o.slug = 'willow-grove'` and
+      # `orgs` is empty while migrations run, so a fresh database came out with no copy at all.
+      - name: A fresh database can render the site
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/checks/a-fresh-database-renders.sql
+
       # Applications two and three, plus the fixture applied twice, plus the assertions. The
       # script includes the committed files with `\ir` rather than a copy — a check that ran a
       # rewritten copy would be testing the rewrite.

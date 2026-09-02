@@ -1,5 +1,10 @@
--- Applies seed.sql and fixtures/rls.sql a second and third time, and fails if either cannot be
--- re-run or if re-running changes anything it should not.
+-- Applies the seed files and fixtures/rls.sql a second and third time, and fails if any of them
+-- cannot be re-run, or if re-running changes anything it should not.
+--
+-- The seed is two files since #126 — `seed.sql` for the hand-authored facts and `seed-prose.sql`
+-- for the generated catalogue — and both are covered here. `supabase/checks/a-fresh-database-
+-- renders.sql` answers the neighbouring question this file does not: whether ONE clean pass
+-- produces a database the site could actually be built from.
 --
 -- ---------------------------------------------------------------------------------------
 -- WHY THIS EXISTS
@@ -89,7 +94,8 @@ create temp table seed_before as
   union all select 'staff', st.id::text, to_jsonb(st.*) - 'updated_at' from public.staff st
   union all select 'tuition_schedules', ts.id::text, to_jsonb(ts.*) - 'updated_at' from public.tuition_schedules ts
   union all select 'tuition_rates', tr.id::text, to_jsonb(tr.*) - 'updated_at' from public.tuition_rates tr
-  union all select 'tuition_fees', tf.id::text, to_jsonb(tf.*) - 'updated_at' from public.tuition_fees tf;
+  union all select 'tuition_fees', tf.id::text, to_jsonb(tf.*) - 'updated_at' from public.tuition_fees tf
+  union all select 'prose', pr.id::text, to_jsonb(pr.*) - 'updated_at' from public.prose pr;
 
 -- An unpublished edit, sitting against a row the seed is about to rewrite. A draft schedule as
 -- well as a draft program, because the two exercise different things: the program is a plain
@@ -111,11 +117,19 @@ from public.orgs o where o.slug = 'willow-grove';
 -- Applications two and three
 -- ---------------------------------------------------------------------------------------
 
-\echo '--- applying supabase/seed.sql (second application) ---'
+-- Both seed files, in the order supabase/config.toml lists them: seed.sql creates the
+-- organization that every statement in seed-prose.sql looks up. seed-prose.sql joined the seed
+-- in #126 and is re-applied here for exactly the reason this whole file exists — it is a
+-- recovery script applied by hand, so "can it be run twice" has to be asserted rather than
+-- assumed. It is also the file most exposed to #93's trap, being one 586-row upsert against a
+-- partial index.
+\echo '--- applying the seed files (second application) ---'
 \ir ../seed.sql
+\ir ../seed-prose.sql
 
-\echo '--- applying supabase/seed.sql (third application) ---'
+\echo '--- applying the seed files (third application) ---'
 \ir ../seed.sql
+\ir ../seed-prose.sql
 
 \echo '--- applying supabase/fixtures/rls.sql (twice) ---'
 \ir ../fixtures/rls.sql
@@ -134,7 +148,8 @@ create temp table seed_after as
   union all select 'staff', st.id::text, to_jsonb(st.*) - 'updated_at' from public.staff st
   union all select 'tuition_schedules', ts.id::text, to_jsonb(ts.*) - 'updated_at' from public.tuition_schedules ts
   union all select 'tuition_rates', tr.id::text, to_jsonb(tr.*) - 'updated_at' from public.tuition_rates tr
-  union all select 'tuition_fees', tf.id::text, to_jsonb(tf.*) - 'updated_at' from public.tuition_fees tf;
+  union all select 'tuition_fees', tf.id::text, to_jsonb(tf.*) - 'updated_at' from public.tuition_fees tf
+  union all select 'prose', pr.id::text, to_jsonb(pr.*) - 'updated_at' from public.prose pr;
 
 do $$
 declare
