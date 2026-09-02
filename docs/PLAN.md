@@ -829,6 +829,20 @@ A `seed` job now applies both files to a **local Supabase stack started inside t
 more after `db reset`, and fails if a row identifier or content value moved or if a planted draft
 did not survive.
 
+**#126 found the gap that shape of check leaves.** Proving the files *re-apply* is not the same
+claim as proving the result is a database anyone could build a site from, and it was not: every
+prose migration is scoped `where o.slug = 'willow-grove'`, migrations run before `seed.sql` creates
+that organization, so a `db reset` database came out with zero rows of copy. The job was green
+throughout, because it never read a row.
+
+So the copy moved into the seed (`seed-prose.sql`, generated with a digest) and the job gained
+`checks/a-fresh-database-renders.sql`, which asserts the *outcome* rather than the mechanics: every
+table the site reads has rows, and the catalogue is at parity across its locales. The check was
+committed before the fix and its failure is in the pull request, so the bug is on record rather
+than taken on trust. The general lesson is worth more than the fix — **"the script runs" and "the
+result works" are different assertions, and a recovery test that only makes the first one is
+reporting on itself.**
+
 **The decision that needed making was where CI gets a database**, since it has no write-capable
 credential and `docs/CONVENTIONS.md` deliberately keeps the service-role key out of every
 environment. Three options were costed on #98; the owner chose the local stack. The reasoning:
