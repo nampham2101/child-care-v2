@@ -27,12 +27,16 @@ import { publicUrlFor } from "@/lib/media";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 /**
- * Which locale's copy the editor works on.
+ * The locale used when a caller names none — **the default, not the only one.**
  *
- * One shipped locale, so there is nothing to switch and no control is rendered — building a
- * picker with a single option would be dead UI. Every function below still takes a locale, so
- * #53 and #54 add a control rather than a rewrite. `docs/PLAN.md` records the shape that
- * control takes when it arrives: inside the page, never a prefix on the admin URL.
+ * This was written when `en` was the only shipped locale and no picker was rendered. #111 added
+ * the control and #53 gave it a second option, so the editor really does switch now: the copy
+ * editor passes an explicit locale from `?locale=`, resolved by `lib/admin/content-locale.ts`.
+ *
+ * Every function below still takes a locale and falls back to this, which is why that arrived as
+ * a control rather than a rewrite. Callers that edit **facts** rather than copy still pass
+ * nothing and get this, correctly — `programs`, `staff` and the rest hold locale-neutral rows,
+ * and #110 and #123 are what made that true.
  */
 const ADMIN_LOCALE = routing.defaultLocale;
 

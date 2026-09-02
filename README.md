@@ -5,15 +5,16 @@ content themselves.
 
 **Live site:** <https://child-care-v2.netlify.app>
 
-> **Status: in progress (`v0.3.0`).** All seven public pages are live, and their facts — hours,
-> rates, ratios, staff, licence number — now come from the database. The admin area is not built
-> yet, so editing still means SQL, and page copy still lives in the message catalogues. Both are
-> `v0.4.0`. See [`docs/PLAN.md`](docs/PLAN.md) for what is being built.
+> **Status: in progress (`v0.6.0`).** All seven public pages are live in **English and German**,
+> and everything on them — facts and copy alike — comes from the database. Staff sign in at
+> `/admin`, edit content in either language, upload photographs of the rooms, and press Publish to
+> rebuild the site. What remains for `v1.0.0` is launch preparation: real content, a performance
+> and accessibility pass, legal pages, and a domain. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## What this is
 
-A fast marketing site (home, programs, about, staff, tuition, FAQ, contact) whose content will live
-in a database and be edited by center staff through a password-protected admin area.
+A fast marketing site (home, programs, about, staff, tuition, FAQ, contact) whose content lives in a
+database and is edited by center staff through a password-protected admin area.
 
 Public pages are prerendered at build time and served from a durable cache by Netlify's Next.js
 runtime — CDN-fast to a visitor, though not literally a static file read. The database is never in a

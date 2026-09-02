@@ -132,10 +132,17 @@ content goes live with it; no second Publish is needed.
 
   - `Gate configuration is complete` from the preflight (#105) — the release gate has every
     credential the merge gate has, so `secrets: inherit` is doing its job.
-  - The **e2e count**. A release gate runs 54; a working copy without `SUPABASE_TEST_PASSWORD`
-    runs 34. A release run reporting 34 is the #103 shape and must not be released from.
+  - The **e2e count**. A release gate runs **57**; a working copy without `SUPABASE_TEST_PASSWORD`
+    runs 37 and skips the other 20. A release run reporting the smaller number is the #103 shape
+    and must not be released from.
 
-  Last verified on `main` at `242fc54`, 2026-08-30: preflight passed, 54 e2e, draft deploy only.
+    The count grows as tests are added — it was 54 through `v0.5.1`, and #124 and #125 brought it
+    to 57. **What matters is not the exact figure but that it is the large one:** the failure this
+    guards against is the admin suites silently not running, which shows up as a drop of ~20, not
+    as a drift of one or two. Update this line when it changes rather than letting the gap widen
+    until nobody trusts the number.
+
+  Last verified on `main` at `f0e5da5`, 2026-09-01: preflight passed, 57 e2e, draft deploy only.
 - **Full rehearsal (proves the real `--prod` path and rollback):** publish a GitHub **pre-release**
   on a throwaway tag such as `v0.1.0-rc.1`. `release: published` fires for pre-releases, so this
   exercises the true production deploy; then rehearse the rollback steps above.

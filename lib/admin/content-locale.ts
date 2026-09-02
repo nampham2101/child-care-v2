@@ -75,8 +75,9 @@ export function contentLocaleName(locale: string): string {
  * The href for one locale's version of the page being viewed.
  *
  * The default locale gets a clean URL with no parameter at all. That keeps every link a staff
- * member has bookmarked working unchanged, and means the single-locale site — which is every
- * site until #53 lands — never grows a query string it has no use for.
+ * member has bookmarked working unchanged, and means a single-locale site never grows a query
+ * string it has no use for. That was every site until #53 routed `de`; it is still the shape any
+ * new deployment starts in, and the reason this stays a parameter rather than becoming required.
  */
 export function localeHref(pathname: string, locale: string): string {
   return locale === DEFAULT_CONTENT_LOCALE
