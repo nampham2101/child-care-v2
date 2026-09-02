@@ -374,6 +374,14 @@ first ADR in this repository. The one line worth repeating here, because it is t
 motivated the whole change: flipping a live row to `draft` would have removed it from the anonymous
 read and **failed the next build**, so editing the phone number would have broken the next deploy.
 
+**A draft can be abandoned as well as published, from `v0.7.0` (#121).** ADR 0001 listed "no way to
+abandon an edit once typed" among the costs of editing live; the twin shape made abandoning one a
+delete rather than a rescue, and this is the ticket that built it. Discard reads as ADR 0001's
+promote cases in mirror image, and the two are **different sentences on screen**: a draft with a
+published twin reverts, while a draft with no twin *is* the thing and removing it deletes content.
+Only a photograph can be in that second state today, because every section but the photo editor
+goes through `saveDraft`, which refuses to create.
+
 ### Publishing is organization-wide, in every language (#116)
 
 One press of Publish promotes every pending draft the organization has, in every locale. The locale
@@ -715,6 +723,7 @@ Then: publish GitHub Release `v0.1.0` → production deploys.
 | `v0.4.0` | Auth and storage: staff login, content editor, prose migration, image upload, publish triggers rebuild |
 | `v0.5.0` | i18n plumbing: locale switcher, `hreflang`, sitemap, content-locale control in the editor |
 | `v0.6.0` | German: the catalogue itself, and the last two columns that could not hold a translation |
+| `v0.7.0` | Discard a pending edit, and two repairs to the restore-from-scratch path |
 | `v1.0.0` | Launch prep: real content, performance and accessibility pass, legal pages, domain |
 
 Shipped as released, not as planned: `v0.4.0` was published but never deployed (#103) and its
