@@ -88,6 +88,16 @@ const FIXTURE_DRAFT_RATIO = "FIXTURE draft";
  */
 const PROSE_NAMESPACE = "FaqPage";
 const PROSE_KEY = "rlsFixtureAnswer";
+/**
+ * Every locator for this field passes `{ exact: true }`, and it is load-bearing since #121.
+ *
+ * `getByLabel` matches a **substring** by default, unlike `getByRole`'s `name`. The discard
+ * control beside a pending string is labelled *Discard the unpublished change to “Rls fixture
+ * answer”* — deliberately, so a screen-reader user on a page of thirty of them knows which one
+ * they are on — and that contains this string, so the loose locator resolves to two elements and
+ * fails on strict mode. Exact matching is the fix; shortening the button's label would trade an
+ * accessible name for a test's convenience.
+ */
 const PROSE_FIELD_LABEL = "Rls fixture answer";
 const ORIGINAL_ANSWER =
   "FIXTURE answer holding {count} — must never be visible";
@@ -478,7 +488,7 @@ test.describe("the copy editor", () => {
       .first()
       .click();
 
-    const field = page.getByLabel(PROSE_FIELD_LABEL);
+    const field = page.getByLabel(PROSE_FIELD_LABEL, { exact: true });
     await expect(field).toHaveValue(ORIGINAL_ANSWER);
 
     await field.fill(EDITED_ANSWER);
@@ -490,7 +500,9 @@ test.describe("the copy editor", () => {
     await expect(formStatus(page)).toContainText(/still shows/i);
 
     await page.reload({ waitUntil: "load" });
-    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(EDITED_ANSWER);
+    await expect(
+      page.getByLabel(PROSE_FIELD_LABEL, { exact: true }),
+    ).toHaveValue(EDITED_ANSWER);
     await expect(page.getByText("Unpublished edit").first()).toBeVisible();
   });
 
@@ -516,11 +528,13 @@ test.describe("the copy editor", () => {
      * property under test here. What matters is that a refused save changes nothing, whatever
      * the field happened to hold when this test began.
      */
-    const before = await page.getByLabel(PROSE_FIELD_LABEL).inputValue();
+    const before = await page
+      .getByLabel(PROSE_FIELD_LABEL, { exact: true })
+      .inputValue();
     expect(before).toContain("{count}");
 
     await page
-      .getByLabel(PROSE_FIELD_LABEL)
+      .getByLabel(PROSE_FIELD_LABEL, { exact: true })
       .fill("FIXTURE answer with the placeholder taken out");
     await page.getByRole("button", { name: "Save draft" }).click();
 
@@ -529,7 +543,9 @@ test.describe("the copy editor", () => {
 
     // Refused means nothing was written.
     await page.reload({ waitUntil: "load" });
-    await expect(page.getByLabel(PROSE_FIELD_LABEL)).toHaveValue(before);
+    await expect(
+      page.getByLabel(PROSE_FIELD_LABEL, { exact: true }),
+    ).toHaveValue(before);
   });
 
   /** An empty box is not how you delete a sentence — the page would render a gap. */
@@ -537,7 +553,7 @@ test.describe("the copy editor", () => {
     await signIn(page);
     await page.goto("/admin/copy/faq", { waitUntil: "load" });
 
-    await page.getByLabel(PROSE_FIELD_LABEL).fill("   ");
+    await page.getByLabel(PROSE_FIELD_LABEL, { exact: true }).fill("   ");
     await page.getByRole("button", { name: "Save draft" }).click();
 
     await expect(formAlert(page)).toContainText(/needs fixing/i);
