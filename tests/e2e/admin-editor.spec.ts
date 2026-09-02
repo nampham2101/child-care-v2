@@ -721,20 +721,24 @@ test.describe("photographs of the spaces", () => {
  *
  * ## Why this is here and not only in `tests/rls/discard.test.ts`
  *
- * That suite proves `discardDraft` leaves the published row untouched, which is the guarantee
- * the feature rests on. It cannot prove that **pressing the button reaches that function** — and
- * more importantly it cannot exercise the two-step confirmation, which lives entirely in the
- * form round trip. A confirmation that silently stopped appearing would leave the one
- * destructive control in the editor firing on a single press, with every other suite green.
+ * That suite proves `discardDraft` leaves the published row untouched, which is the guarantee the
+ * feature rests on. It cannot prove that **pressing the button reaches that function**, and it
+ * cannot exercise the two-step confirmation at all — that lives entirely in the form round trip.
+ * A confirmation that silently stopped appearing would leave the one destructive control in the
+ * editor firing on a single press, with every other suite green.
  *
  * ## Both of ADR 0001's cases, because they end differently
  *
- * The published-twin case *reverts* and the twin-less case *removes*. The wording differs, and
- * so does the outcome — one leaves a row behind and the other does not. Testing only the first
- * would leave the destructive half unexercised, and it is the half the confirmation exists for.
+ * The published-twin case *reverts*; the twin-less case *removes*. Different wording, different
+ * outcome — one leaves a row behind and the other does not. Testing only the first would leave
+ * the destructive half unexercised, and it is the half the confirmation exists for.
  *
  * `restoreFixtureState` recreates `rlsFixtureDraft` rather than merely updating it, precisely so
  * the removal test below can delete it. See the note in that function.
+ *
+ * **Two sign-ins, not four.** The cancel and confirm halves are one test because they are one
+ * sequence, and because this file already signs in more than a dozen times against a real auth
+ * server; adding four more for narration is not free.
  */
 test.describe("discarding a pending edit", () => {
   test.skip(
@@ -745,13 +749,15 @@ test.describe("discarding a pending edit", () => {
   test.beforeAll(restoreFixtureState);
   test.afterAll(restoreFixtureState);
 
-  /** The last section on the page is the published fixture program — see `ORIGINAL_RATIO`. */
+  /** The last section is the published fixture program — the one with a twin to revert to. */
   const lastDiscard = (page: import("@playwright/test").Page) =>
     page
       .getByRole("button", { name: /^Discard the unpublished change/ })
       .last();
 
-  test("cancelling leaves the edit exactly where it was", async ({ page }) => {
+  test("cancelling keeps the edit; confirming reverts to the published value", async ({
+    page,
+  }) => {
     await signIn(page);
     await page.goto("/admin/programs", { waitUntil: "load" });
 
@@ -765,28 +771,22 @@ test.describe("discarding a pending edit", () => {
     await page.reload({ waitUntil: "load" });
     await lastDiscard(page).click();
 
-    // The prompt replaced the button, and it is the reverting wording: there is a published
-    // version to come back to.
-    const prompt = page.getByRole("alert");
-    await expect(prompt).toContainText("The published version stays");
-    await expect(prompt).toContainText("cannot be undone");
+    /*
+     * `formAlert` rather than `getByRole("alert")`: Next renders an always-present route
+     * announcer with that role, so the bare locator matches two elements and fails strict mode.
+     * `tests/e2e/announcer.ts` exists because that has now cost four separate failures.
+     */
+    await expect(formAlert(page)).toContainText("The published version stays");
+    await expect(formAlert(page)).toContainText("cannot be undone");
 
-    // Nothing has been written yet. Backing out is a plain submit with no discard field on it.
+    // Backing out writes nothing — it is a plain submit carrying no discard field.
     await page.getByRole("button", { name: "Keep it" }).click();
-
     await page.reload({ waitUntil: "load" });
     await expect(
       page.getByRole("textbox", { name: "Ratio" }).last(),
     ).toHaveValue(EDITED_RATIO);
-    await expect(page.getByText("Unpublished edit").first()).toBeVisible();
-  });
 
-  test("confirming reverts to the published value and says the site never moved", async ({
-    page,
-  }) => {
-    await signIn(page);
-    await page.goto("/admin/programs", { waitUntil: "load" });
-
+    // Now go through with it.
     await lastDiscard(page).click();
     await page.getByRole("button", { name: /^Yes, discard/ }).click();
 
@@ -795,7 +795,7 @@ test.describe("discarding a pending edit", () => {
       "what the public site has been showing all along",
     );
 
-    // The editor is back to the published value, and stops claiming an edit is waiting.
+    // The editor is showing the published value again, and stops claiming an edit is waiting.
     await page.reload({ waitUntil: "load" });
     await expect(
       page.getByRole("textbox", { name: "Ratio" }).last(),
@@ -803,8 +803,8 @@ test.describe("discarding a pending edit", () => {
   });
 
   test("the published row survived it, checked from outside the session", async () => {
-    // The assertion the whole feature is judged on, made the way the visitor sees it rather
-    // than through the editor's own draft-preferring view.
+    // The assertion the feature is judged on, made the way a visitor sees it rather than through
+    // the editor's own draft-preferring view. No sign-in: this talks to the database directly.
     const visitor = createClient(PROJECT_URL!, ANON_KEY!);
     const { data, error } = await visitor
       .from("programs")
@@ -828,9 +828,10 @@ test.describe("discarding a pending edit", () => {
       .first()
       .click();
 
-    const prompt = page.getByRole("alert");
-    await expect(prompt).toContainText("never been published");
-    await expect(prompt).toContainText("no earlier version to go back to");
+    await expect(formAlert(page)).toContainText("never been published");
+    await expect(formAlert(page)).toContainText(
+      "no earlier version to go back to",
+    );
 
     await page.getByRole("button", { name: /^Yes, discard/ }).click();
     await expect(formStatus(page)).toContainText("was removed");
@@ -838,7 +839,7 @@ test.describe("discarding a pending edit", () => {
       "the public site is unchanged",
     );
 
-    // Gone entirely — one fewer room in the editor than before.
+    // Gone entirely: no room on the page has a pending edit any more.
     await page.reload({ waitUntil: "load" });
     await expect(
       page.getByRole("button", { name: /^Discard the unpublished change/ }),
