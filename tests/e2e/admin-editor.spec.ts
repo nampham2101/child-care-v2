@@ -66,6 +66,15 @@ if (!TEST_PASSWORD && process.env.CI) {
 const DRAFT_KEY = "rlsFixtureDraft";
 
 /**
+ * Its ratio, which is also the marker `supabase/fixtures/rls.sql` gives it.
+ *
+ * Named here because `restoreFixtureState` may have to **recreate** this row rather than update
+ * it since #121 — see the note there — and a recreated row has to come back with the text the
+ * other suites assert on.
+ */
+const FIXTURE_DRAFT_RATIO = "FIXTURE draft — must never be visible";
+
+/**
  * The fixture organization's prose, added by #77 in `supabase/fixtures/rls.sql`.
  *
  * `PROSE_ROOM_LABEL` is the one that guards a regression rather than a feature: #76 emptied
@@ -117,11 +126,38 @@ async function restoreFixtureState() {
     .update({ ratio: ORIGINAL_RATIO, status: "published" })
     .eq("key", PUBLISHED_KEY);
 
-  // Promoted by a publish, or left alone. Either way it goes back to being a draft.
-  await member
+  /*
+   * Promoted by a publish, left alone — or, since #121, **deleted**.
+   *
+   * This row is a draft with no published twin, which is exactly the shape a discard removes
+   * outright rather than reverting. An `update` cannot restore a row that is gone, and nothing
+   * else recreates it: `fixtures/rls.sql` is applied by hand and not by this suite. Without the
+   * insert below, one discard here would leave the fixture organization holding one program row
+   * for every subsequent run, and the suite that fails is `tests/rls/authenticated.test.ts`,
+   * which counts them and has nothing to do with the editor.
+   */
+  const { data: existingDraft } = await member
     .from("programs")
-    .update({ status: "draft" })
+    .select("id")
     .eq("key", DRAFT_KEY);
+
+  if (existingDraft && existingDraft.length > 0) {
+    await member
+      .from("programs")
+      .update({ ratio: FIXTURE_DRAFT_RATIO, status: "draft" })
+      .eq("key", DRAFT_KEY);
+  } else {
+    const { data: orgId } = await member.rpc("current_org_id");
+    if (orgId) {
+      await member.from("programs").insert({
+        org_id: orgId,
+        key: DRAFT_KEY,
+        ratio: FIXTURE_DRAFT_RATIO,
+        sort_order: 901,
+        status: "draft",
+      });
+    }
+  }
 
   /*
    * Prose, restored on the same principle: remove any draft twin this suite created, then put
@@ -657,5 +693,135 @@ test.describe("photographs of the spaces", () => {
       .click();
 
     await expect(formAlert(page)).toContainText(/needs fixing/i);
+  });
+});
+
+/**
+ * Discarding a pending edit (#121) — the only irreversible control in the editor.
+ *
+ * ## Why this is here and not only in `tests/rls/discard.test.ts`
+ *
+ * That suite proves `discardDraft` leaves the published row untouched, which is the guarantee
+ * the feature rests on. It cannot prove that **pressing the button reaches that function** — and
+ * more importantly it cannot exercise the two-step confirmation, which lives entirely in the
+ * form round trip. A confirmation that silently stopped appearing would leave the one
+ * destructive control in the editor firing on a single press, with every other suite green.
+ *
+ * ## Both of ADR 0001's cases, because they end differently
+ *
+ * The published-twin case *reverts* and the twin-less case *removes*. The wording differs, and
+ * so does the outcome — one leaves a row behind and the other does not. Testing only the first
+ * would leave the destructive half unexercised, and it is the half the confirmation exists for.
+ *
+ * `restoreFixtureState` recreates `rlsFixtureDraft` rather than merely updating it, precisely so
+ * the removal test below can delete it. See the note in that function.
+ */
+test.describe("discarding a pending edit", () => {
+  test.skip(
+    !TEST_PASSWORD,
+    "SUPABASE_TEST_PASSWORD is not set, so there is no session to sign in with.",
+  );
+
+  test.beforeAll(restoreFixtureState);
+  test.afterAll(restoreFixtureState);
+
+  /** The last section on the page is the published fixture program — see `ORIGINAL_RATIO`. */
+  const lastDiscard = (page: import("@playwright/test").Page) =>
+    page
+      .getByRole("button", { name: /^Discard the unpublished change/ })
+      .last();
+
+  test("cancelling leaves the edit exactly where it was", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/programs", { waitUntil: "load" });
+
+    await page
+      .getByRole("textbox", { name: "Ratio" })
+      .last()
+      .fill(EDITED_RATIO);
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(formStatus(page)).toContainText("saved as a draft");
+
+    await page.reload({ waitUntil: "load" });
+    await lastDiscard(page).click();
+
+    // The prompt replaced the button, and it is the reverting wording: there is a published
+    // version to come back to.
+    const prompt = page.getByRole("alert");
+    await expect(prompt).toContainText("The published version stays");
+    await expect(prompt).toContainText("cannot be undone");
+
+    // Nothing has been written yet. Backing out is a plain submit with no discard field on it.
+    await page.getByRole("button", { name: "Keep it" }).click();
+
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("textbox", { name: "Ratio" }).last(),
+    ).toHaveValue(EDITED_RATIO);
+    await expect(page.getByText("Unpublished edit").first()).toBeVisible();
+  });
+
+  test("confirming reverts to the published value and says the site never moved", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/programs", { waitUntil: "load" });
+
+    await lastDiscard(page).click();
+    await page.getByRole("button", { name: /^Yes, discard/ }).click();
+
+    await expect(formStatus(page)).toContainText("was discarded");
+    await expect(formStatus(page)).toContainText(
+      "what the public site has been showing all along",
+    );
+
+    // The editor is back to the published value, and stops claiming an edit is waiting.
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("textbox", { name: "Ratio" }).last(),
+    ).toHaveValue(ORIGINAL_RATIO);
+  });
+
+  test("the published row survived it, checked from outside the session", async () => {
+    // The assertion the whole feature is judged on, made the way the visitor sees it rather
+    // than through the editor's own draft-preferring view.
+    const visitor = createClient(PROJECT_URL!, ANON_KEY!);
+    const { data, error } = await visitor
+      .from("programs")
+      .select("ratio, status")
+      .eq("key", PUBLISHED_KEY);
+
+    expect(error).toBeNull();
+    expect(data).toEqual([{ ratio: ORIGINAL_RATIO, status: "published" }]);
+  });
+
+  test("a draft that was never published is removed, and says so", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/programs", { waitUntil: "load" });
+
+    // The FIRST section: `rlsFixtureDraft` sorts before the published fixture row and has no
+    // published twin, so this is the case that deletes rather than reverts.
+    await page
+      .getByRole("button", { name: /^Discard the unpublished change/ })
+      .first()
+      .click();
+
+    const prompt = page.getByRole("alert");
+    await expect(prompt).toContainText("never been published");
+    await expect(prompt).toContainText("no earlier version to go back to");
+
+    await page.getByRole("button", { name: /^Yes, discard/ }).click();
+    await expect(formStatus(page)).toContainText("was removed");
+    await expect(formStatus(page)).toContainText(
+      "the public site is unchanged",
+    );
+
+    // Gone entirely — one fewer room in the editor than before.
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("button", { name: /^Discard the unpublished change/ }),
+    ).toHaveCount(0);
   });
 });

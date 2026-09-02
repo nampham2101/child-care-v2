@@ -94,6 +94,16 @@ edited by someone else" — a question the current two-state model does not rais
 alternative; a gap worth its own ticket, filed as #121. It makes the all-or-nothing rule survivable
 without changing what Publish means.
 
+> **Shipped.** #121 built it, and the decision recorded here is why it was worth building: with
+> publishing organization-wide and staying that way, one unwanted edit otherwise blocks every other
+> pending change until someone publishes it. Discard is the release valve, and it left this ADR
+> intact — Publish still promotes everything, and nothing here was reopened.
+>
+> One thing #121 found that this ADR's reasoning did not anticipate: discard has **two** cases, not
+> one. A draft with a published twin reverts; a draft with no twin — today only a photograph — is
+> the thing itself, and removing it deletes content. `lib/admin/discard.ts` words the confirmation
+> from whichever it is.
+
 ## Consequences
 
 **`components/admin/PublishPanel.tsx` is now normative.** The sentence "That includes every language

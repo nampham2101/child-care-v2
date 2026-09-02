@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { DraftError, saveDraft } from "@/lib/admin/drafts";
+import { maybeDiscard } from "@/lib/admin/discard-request";
 import { getEditablePrograms, getEditableRhythm } from "@/lib/admin/editable";
 import { failed, invalid, saved, type SaveState } from "@/lib/admin/form-state";
 import { FieldReader } from "@/lib/admin/validation";
@@ -24,6 +25,15 @@ export async function savePrograms(
   _previous: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
+  /*
+   * Discard first, before anything is read or validated (#121). A staff member who typed
+   * something the form refuses is exactly the person most likely to want the edit gone, and a
+   * discard blocked by "one field needs fixing" would be absurd when the fields are what is
+   * being thrown away. Returns null when this submission is an ordinary save.
+   */
+  const discarded = await maybeDiscard(formData);
+  if (discarded) return discarded;
+
   const reader = new FieldReader(formData);
 
   const programKeys = formData.getAll("program_key").map(String);

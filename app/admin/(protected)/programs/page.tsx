@@ -50,6 +50,11 @@ export default async function ProgramsPage() {
                     : undefined
                 }
                 pending={program.hasDraft}
+                discard={{
+                  table: "programs",
+                  identity: { key: program.key },
+                  label: `the ${label.text} room`,
+                }}
               >
                 {/* The key travels with the row so the save knows which room this is. It is
                     never shown and never editable — see lib/admin/labels.ts. */}

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { saveProse } from "@/app/admin/(protected)/copy/[group]/actions";
 import { ContentLocaleSwitcher } from "@/components/admin/ContentLocaleSwitcher";
+import { DiscardControl } from "@/components/admin/DiscardControl";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { ProseField } from "@/components/admin/ProseField";
 import { DraftBadge } from "@/components/admin/Section";
@@ -124,8 +125,24 @@ export default async function CopyGroupPage({ params, searchParams }: Params) {
               {strings.map((string) => (
                 <div key={string.key}>
                   {string.hasDraft ? (
-                    <div className="mb-2">
+                    <div className="mb-2 flex flex-col gap-2">
                       <DraftBadge />
+                      {/* Per string rather than per group. This editor is the one place a
+                          pending edit is already shown for each individual row, and it is where
+                          the "half-typed sentence" #121 opens with actually happens. A prose row
+                          is identified by all three of these — the locale included, or a discard
+                          on the German page would take the English row with it. */}
+                      <DiscardControl
+                        target={{
+                          table: "prose",
+                          identity: {
+                            namespace: string.namespace,
+                            key: string.key,
+                            locale: string.locale,
+                          },
+                          label: `“${string.label}”`,
+                        }}
+                      />
                     </div>
                   ) : null}
                   <ProseField

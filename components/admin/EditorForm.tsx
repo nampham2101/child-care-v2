@@ -18,6 +18,19 @@ import { IDLE, type SaveState } from "@/lib/admin/form-state";
  */
 export const FieldErrorContext = createContext<Record<string, string>>({});
 
+/**
+ * The discard awaiting a second press, if there is one (#121).
+ *
+ * A context rather than a prop because the control sits inside `children`, which every editor
+ * renders as ordinary server markup — threading state down through six pages' worth of sections
+ * would mean making all of them client components. `FieldErrorContext` beside it exists for the
+ * same reason and reaches `Field` the same way.
+ */
+export const DiscardConfirmContext = createContext<{
+  target: string;
+  prompt: string;
+} | null>(null);
+
 export function EditorForm({
   action,
   children,
@@ -32,7 +45,9 @@ export function EditorForm({
   return (
     <form action={formAction} className="flex flex-col gap-8">
       <FieldErrorContext.Provider value={state.fieldErrors ?? {}}>
-        {children}
+        <DiscardConfirmContext.Provider value={state.confirming ?? null}>
+          {children}
+        </DiscardConfirmContext.Provider>
       </FieldErrorContext.Provider>
 
       <div className="flex flex-wrap items-center gap-4 border-t border-border pt-6">

@@ -56,6 +56,15 @@ export default async function CenterPage() {
             title="Getting in touch"
             description="The phone number is the one thing this whole site is trying to get a parent to use."
             pending={center.hasDraft}
+            /* `site_settings` is one row per organization, so this covers every field on this
+               page rather than only the ones in this card — which is why the label says "the
+               centre's details" and not "getting in touch". The other two cards deliberately
+               carry no badge and no control for the same reason: there is one row here. */
+            discard={{
+              table: "site_settings",
+              identity: {},
+              label: "the centre’s details",
+            }}
           >
             <Field
               name="phone_display"

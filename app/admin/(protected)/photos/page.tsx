@@ -63,6 +63,15 @@ export default async function PhotosPage() {
                   : "No photograph yet. This room shows no image on the public site until one is uploaded."
               }
               pending={space.hasDraft}
+              /* The one place a discard can mean "remove the thing itself": a photograph added
+                 through `saveOrCreateDraft` has no published twin, so there is nothing to fall
+                 back to. The server works out which case it is and words the prompt to match —
+                 see `lib/admin/discard.ts`. */
+              discard={{
+                table: "media",
+                identity: { key: space.key },
+                label: `the photograph of ${space.label}`,
+              }}
             >
               {space.image ? (
                 <div className="overflow-hidden rounded-xl border border-border bg-cream-100">
