@@ -5,10 +5,12 @@ Two things live here, and they are applied differently because they are differen
 | File | What it is | Runs |
 |---|---|---|
 | `migrations/*.sql` | Schema. See [`migrations/README.md`](migrations/README.md) | Once, forward only |
-| `seed.sql` | The fictional center's facts | Whenever the seeded values change |
+| `seed.sql` | The fictional center's facts, hand-authored | Whenever the seeded values change |
+| `seed-prose.sql` | The site's copy, generated. See below (#126) | Whenever published copy should move into the restore point |
 | `fixtures/rls.sql` | Rows the row-level security suite needs refused | Whenever the fixture changes |
-| `checks/reseed-is-idempotent.sql` | Proves the two above can still be re-applied (#98) | Every CI run |
-| `config.toml` | The local stack that check runs against | Only in CI |
+| `checks/reseed-is-idempotent.sql` | Proves the seed files can still be re-applied (#98) | Every CI run |
+| `checks/a-fresh-database-renders.sql` | Proves one clean pass yields a usable database (#126) | Every CI run |
+| `config.toml` | The local stack those checks run against | Only in CI |
 
 There is **one hosted project, and no local database on the development machine** — Docker is not
 installed there, so `supabase start` and everything built on it is unavailable.
@@ -20,9 +22,13 @@ job touches the hosted project, and it holds no credential.
 
 ## Applying the seed
 
-`seed.sql` is the file `supabase db reset` would normally run after rebuilding a local stack. With
-no local stack, it is applied against the hosted project directly, by pasting it into the **SQL
-Editor** in the Supabase dashboard and running it.
+`seed.sql` and `seed-prose.sql` are the files `supabase db reset` would normally run after
+rebuilding a local stack. With no local stack, they are applied against the hosted project
+directly, by pasting each into the **SQL Editor** in the Supabase dashboard and running it.
+
+**`seed.sql` first.** It creates the organization that every statement in `seed-prose.sql` looks
+up; the other order applies 586 rows to nothing and reports success. `config.toml` lists them in
+that order for the same reason.
 
 That is a manual step on purpose. The alternative — a script in `package.json` — needs a credential
 that can write, and the only such credential is the service-role key, which
@@ -78,14 +84,29 @@ order by 1;
 ```
 
 A fully seeded database has 1 org, 1 site_settings, 3 programs, 7 daily_rhythm, 7 staff, 3
-tuition_schedules, 9 tuition_rates, and 1 tuition_fees — 32 facts in total — plus **279 `prose`
-rows**, one per English string, from #76's backfill.
+tuition_schedules, 9 tuition_rates, and 1 tuition_fees — 32 facts in total — plus **586 `prose`
+rows**, 293 per locale across `en` and `de`.
 
-`prose` is counted here but is **not** part of `seed.sql`. It was populated once by
-`migrations/20260822020339_backfill_prose_from_en_catalogue.sql` and the database is the source of
-truth for copy from that point on; re-running the seed neither writes nor touches it. A `prose` count
-of 0 therefore means that migration has not been applied, not that the seed is partial — and the
-symptom is a build that fails in `@/lib/prose` naming the locale, rather than a page rendering blank.
+### `prose` is part of the seed now, and was not before (#126)
+
+This section used to say `prose` was populated once by
+`migrations/20260822020339_backfill_prose_from_en_catalogue.sql` and that re-running the seed
+neither wrote nor touched it. That was true, and it was the bug.
+
+Every prose migration is scoped `where o.slug = 'willow-grove'`, and on a fresh `supabase db
+reset` the migrations run **before** `seed.sql` creates that organization — so all five of them
+inserted nothing and a rebuilt database came out with no copy at all. Nobody noticed because the
+only database anyone built from was the hosted one, where the organization already existed when
+those migrations ran.
+
+The copy is data, so it lives in the seed now: `seed-prose.sql`, generated from the published rows
+by `scripts/generate-prose-seed.mjs` and carrying an md5 over its contents. The five migrations are
+left exactly as they are — they were correct against the database that existed when they were
+written, and rewriting applied migrations to tidy history is a worse habit than leaving them as
+no-ops on a rebuild.
+
+A `prose` count of 0 now means the seed is partial, and `checks/a-fresh-database-renders.sql` fails
+the CI seed job rather than letting it through to a Netlify build that dies in `@/lib/prose`.
 
 ## `lib/` no longer holds these values
 
