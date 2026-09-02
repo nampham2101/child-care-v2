@@ -5,11 +5,12 @@ content themselves.
 
 **Live site:** <https://child-care-v2.netlify.app>
 
-> **Status: in progress (`v0.6.0`).** All seven public pages are live in **English and German**,
+> **Status: in progress (`v0.7.0`).** All seven public pages are live in **English and German**,
 > and everything on them — facts and copy alike — comes from the database. Staff sign in at
-> `/admin`, edit content in either language, upload photographs of the rooms, and press Publish to
-> rebuild the site. What remains for `v1.0.0` is launch preparation: real content, a performance
-> and accessibility pass, legal pages, and a domain. See [`docs/PLAN.md`](docs/PLAN.md).
+> `/admin`, edit content in either language, upload photographs of the rooms, discard an edit they
+> have changed their mind about, and press Publish to rebuild the site. What remains for `v1.0.0`
+> is launch preparation: real content, a performance and accessibility pass, legal pages, and a
+> domain. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## What this is
 

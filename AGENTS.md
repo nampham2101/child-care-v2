@@ -7,30 +7,33 @@ any AI agent in this repository. Humans read `docs/`; you read this first.
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.6.0` is the released version, live at <https://child-care-v2.netlify.app>
-and deployed 2026-09-01. All seven public pages — home, `/programs`, `/about`, `/staff`,
+**Current state:** `v0.7.0` is the released version, live at <https://child-care-v2.netlify.app>
+and deployed 2026-09-02. All seven public pages — home, `/programs`, `/about`, `/staff`,
 `/tuition`, `/faq`, `/contact` — read their facts and prose from Supabase at build time, and
 render in **English and German**: `routing.locales` is `["en", "de"]`, and `/de/*` is prerendered
 beside `/en/*`. Row-level security is on, and the anonymous key can read published rows only.
 Staff log in at `/admin/sign-in`, edit facts and copy in either language, upload images of the
-spaces, and press Publish to rebuild production.
+spaces, **discard an edit they have changed their mind about**, and press Publish to rebuild
+production.
 
 **The `v0.4.0` tag is not a version of this site.** It was published, its release run failed, and
 production stayed on `v0.3.0` for a day (#103). Everything the `v0.4.0` milestone describes reached
 production as `v0.4.1`. Do not treat the `v0.4.0` tag as a rollback target — it never deployed.
 
-**What the last two releases contained.** `v0.5.0` was the i18n plumbing only, agreed 2026-08-30 —
+**What the recent releases contained.** `v0.5.0` was the i18n plumbing only, agreed 2026-08-30 —
 #110 (locale-dependent `site_settings` fields moved to `prose`), #111 (content locale control in
 the copy editor), #52 (public switcher, `hreflang`, sitemap), with #112 and #115 alongside;
 `v0.5.1` followed with #120. `v0.6.0` is the language itself: #53 (the German catalogue) and #123
-(the last two untranslatable columns), with #122 alongside.
+(the last two untranslatable columns), with #122 alongside. `v0.7.0` is #121 (discard a pending
+draft), plus two repairs to the recovery path — #126 (a rebuilt database had no copy at all) and
+#127 (a migration filename disagreeing with its applied version).
 
 Every piece of #52 and #111 that was gated on `routing.locales.length > 1` lit up by itself when
 `de` was routed — the public switcher, `hreflang`, the sitemap's German entries, the admin's
 content-locale control. Nothing had to be flipped on; that gating was the design paying out, and it
 is why **adding Italian (#54) should stay a one-line change to `routing.locales` plus a catalogue.**
 
-**#54, #27, #121, #126 and #127 are all proposals.** Do not start them without an assignment.
+**#54, #27 and #132 are all proposals.** Do not start them without an assignment.
 
 **No English string reaches a German page any more.** `programs.age_label` and
 `programs.group_size` were the last two — English sentences in a facts table with no locale, so
@@ -80,6 +83,20 @@ Things that bite the unwary:
 - **Uploads are the only untrusted input.** `lib/admin/image.ts` reads the actual bytes; a
   content-type header is a claim. Storage paths start with the organization id because the storage
   policies compare that segment — changing the path shape is changing a security boundary.
+- **The editor can delete content now, in exactly one shape** (#121). Discarding a draft that has a
+  published twin destroys only the edit. Discarding one with **no** twin destroys the thing, and
+  today only a photograph can be in that state — every other section goes through `saveDraft`,
+  which refuses to create. `lib/admin/discard.ts` words the confirmation from whichever case the
+  database says it is, rather than from what the page assumed. Do not collapse the two sentences.
+- **The test suites share one live database, and a cancelled CI run leaves rows behind.** Clean-up
+  lives in `afterAll`, which a cancelled job never reaches — so a run killed mid-suite strands
+  fixture rows and the *next* run fails on a count, somewhere nowhere near whatever changed. This
+  cost a red release dry run on 2026-09-02. If a fixture-count assertion fails and the diff looks
+  unrelated, check `programs` for stray `rlsFixture*` keys before believing the failure.
+- **A fixture value has to be one the editor itself would accept.** `supabase/fixtures/rls.sql`
+  writes through SQL, which skips the form's validation — so a marker longer than the field's own
+  limit is a row nobody can save. #123 put a 37-character marker in `ratio`, which `savePrograms`
+  caps at 20, and it failed an unrelated save test two tickets later. Keep fixture text short.
 
 Merged is not shipped — only a published release reaches production.
 
@@ -191,7 +208,7 @@ Re-opening these wastes the user's time. They are recorded with reasoning in `do
 |---|---|
 | `docs/PLAN.md` | What is being built, decisions and their reasoning, open questions |
 | `docs/CONVENTIONS.md` | Folder structure, naming, commits, PR scope, who reviews, release policy |
-| GitHub Issues | The task queue. Everything through `v0.6.0` is closed and shipped; no milestone is open yet |
+| GitHub Issues | The task queue. Everything through `v0.7.0` is closed and shipped; no milestone is open yet |
 | GitHub Releases | The release history. There is no changelog file |
 
 ---
