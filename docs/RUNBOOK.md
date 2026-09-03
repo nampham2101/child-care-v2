@@ -160,7 +160,15 @@ content goes live with it; no second Publish is needed.
     twenty, not as a drift of one or two. Update this line when it changes rather than letting the
     gap widen until nobody trusts the number.
 
-  Last verified on `main` at `6d5e179`, 2026-09-02: preflight passed, 60 e2e, draft deploy only.
+  Last verified on `main` at `4c7397b`, 2026-09-03: preflight passed, 60 e2e, draft deploy only,
+  production untouched and still serving.
+
+  That run was started **deliberately while the post-merge CI was still going**, because that is
+  the case which used to go red. It queued instead of cancelling: CI on `main` ran 02:24:37 →
+  02:27:35 and finished green on its own, the dry run was dispatched at 02:25:00, and its `verify`
+  job started at 02:27:37 — two seconds after the database came free. Its `seed` job had already
+  run in parallel from 02:25:05, which is the other half of #134 working, since that job's
+  Postgres stack is local and shares nothing. Observed, not reasoned about.
 - **Full rehearsal (proves the real `--prod` path and rollback):** publish a GitHub **pre-release**
   on a throwaway tag such as `v0.1.0-rc.1`. `release: published` fires for pre-releases, so this
   exercises the true production deploy; then rehearse the rollback steps above.
