@@ -92,3 +92,73 @@ export async function requireFixtureSetup(
 
   return { fixtureOrgId, willowGroveOrgId };
 }
+
+/**
+ * The prefixes every suite-owned scratch row is named with.
+ *
+ * `rlsFixture*` is written by `authenticated.test.ts`, `draft-twins.test.ts` and
+ * `discard.test.ts`; `rlsPublish*` by `publish.test.ts`. Each of those creates its rows in the
+ * test and removes them in `afterAll`, so a row carrying one of these prefixes that is still
+ * here at the start of a later run did not get cleaned up.
+ */
+const SCRATCH_PREFIXES = ["rlsFixture", "rlsPublish"];
+
+/**
+ * Names the cause when a whole-table sweep finds rows the fixture is not supposed to hold.
+ *
+ * ## Why this is not just `toEqual`
+ *
+ * A sweep like "the fixture organization holds exactly these two programs" is the right
+ * assertion — it is what proves the tenancy boundary rather than asking about one key. But when
+ * it fails it reports `expected [ 'rlsFixtureDraft', …(2) ] to deeply equal […(1)]`, which
+ * reads as a policy regression in the suite that happened to run first, and sends whoever finds
+ * it into the migrations.
+ *
+ * The far commoner cause is #134: clean-up lives in `afterAll`, a cancelled job never reaches
+ * it, and the stranded row fails the *next* run. That cost a red v0.7.0 dry run and about an
+ * hour of looking in the wrong place. `cancel-in-progress: false` in `ci.yml` is the fix, and
+ * this is the message for the times a run is still killed some other way — a runner dying, or
+ * someone pressing cancel by hand.
+ *
+ * The distinction it draws is the useful one: a stray key carrying a suite's own prefix is
+ * left-over state, and a stray key carrying anything else is a real finding — another
+ * organization's row became visible, which is the thing these suites exist to catch. Only the
+ * first gets explained away.
+ */
+export function requireNoStrandedFixtureRows(
+  table: string,
+  actualKeys: string[],
+  expectedKeys: string[],
+): void {
+  const strays = actualKeys.filter((key) => !expectedKeys.includes(key));
+
+  if (strays.length === 0) return;
+
+  const leftOver = strays.filter((key) =>
+    SCRATCH_PREFIXES.some((prefix) => key.startsWith(prefix)),
+  );
+
+  if (leftOver.length < strays.length) {
+    // At least one stray is not a scratch key, so this is not a clean-up story. Say nothing
+    // reassuring — a row appearing here that no suite wrote is exactly the failure the sweep
+    // is for.
+    throw new Error(
+      `${table} holds rows the fixture organization should not be able to see: ` +
+        `${strays.join(", ")}. Expected only ${expectedKeys.join(", ")}. Keys that do not ` +
+        "start with a suite's own scratch prefix have no innocent explanation — check the " +
+        "authenticated policies before assuming this is test litter.",
+    );
+  }
+
+  throw new Error(
+    `LEFT-OVER FIXTURE STATE, NOT A POLICY FAILURE: ${table} holds ` +
+      `${leftOver.join(", ")} on top of the ${expectedKeys.length} rows the fixture owns ` +
+      "permanently. Those keys belong to a suite that creates them in a test and deletes them " +
+      "in afterAll, so finding them at rest means a run died before its afterAll — a cancelled " +
+      "job, a killed runner. See #134: this is why ci.yml sets cancel-in-progress: false.\n\n" +
+      "Nothing is wrong with the change under test. Clear the strays and re-run:\n" +
+      `  delete from public.${table} where key in (${leftOver
+        .map((key) => `'${key}'`)
+        .join(", ")});`,
+  );
+}

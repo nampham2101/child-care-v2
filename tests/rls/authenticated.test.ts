@@ -35,7 +35,10 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Database } from "@/lib/database.types";
-import { requireFixtureSetup } from "./fixture-setup";
+import {
+  requireFixtureSetup,
+  requireNoStrandedFixtureRows,
+} from "./fixture-setup";
 
 const PROJECT_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -72,6 +75,11 @@ const visitor = createClient<Database>(PROJECT_URL, ANON_KEY);
 /** Written and deleted by this suite. Kept distinct from the two rows anon.test.ts asserts
  *  against, so a failure here cannot leave that suite red for an unrelated reason. */
 const SCRATCH_KEY = "rlsFixtureScratch";
+
+/** The programs the fixture organization owns at rest, sorted. `supabase/fixtures/rls.sql`
+ *  writes both and no suite removes either; everything else any suite creates under this
+ *  organization is scratch and is deleted in an `afterAll`. */
+const PERMANENT_FIXTURE_PROGRAMS = ["rlsFixtureDraft", "rlsFixturePublished"];
 
 let fixtureOrgId: string;
 let willowGroveOrgId: string;
@@ -146,10 +154,16 @@ describe("a member reads its own organization, drafts included", () => {
     const { data, error } = await member.from("programs").select("key, org_id");
 
     expect(error).toBeNull();
-    expect(data!.map((row) => row.key).sort()).toEqual([
-      "rlsFixtureDraft",
-      "rlsFixturePublished",
-    ]);
+
+    const keys = data!.map((row) => row.key).sort();
+
+    // Before the assertion, not instead of it. This sweep is the one most likely to trip over a
+    // row another suite stranded, and `toEqual` would report that as a tenancy failure here
+    // (#134). The helper explains a left-over scratch key and stays out of the way otherwise —
+    // a stray that is *not* a scratch key still reaches the assertion below as a real finding.
+    requireNoStrandedFixtureRows("programs", keys, PERMANENT_FIXTURE_PROGRAMS);
+
+    expect(keys).toEqual(PERMANENT_FIXTURE_PROGRAMS);
     expect(data!.every((row) => row.org_id === fixtureOrgId)).toBe(true);
   });
 });
