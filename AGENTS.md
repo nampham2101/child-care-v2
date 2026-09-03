@@ -88,6 +88,13 @@ Things that bite the unwary:
   today only a photograph can be in that state — every other section goes through `saveDraft`,
   which refuses to create. `lib/admin/discard.ts` words the confirmation from whichever case the
   database says it is, rather than from what the page assumed. Do not collapse the two sentences.
+- **A discard names a row, not always a card** (#132). Where a `Section` covers many rows — the
+  seven `daily_rhythm` slots, and each schedule's `tuition_rates` cells — the control belongs to
+  the row and `components/admin/PendingEdit.tsx` renders it, badge and all. Those sections pass no
+  `discard` of their own, because one there would be a **bulk** discard, which is a different
+  action nobody has asked for; their badge counts instead of repeating the row's words. A rate is
+  the only discardable thing with no key — identified by `{ schedule_id, program_id }`, two UUIDs
+  — so its label has to be built from both names or the confirmation identifies nothing.
 - **The test suites share one live database, so the runs that touch it queue rather than overlap**
   (#134). `ci.yml`'s `verify` job is grouped on the constant `hosted-database` with
   `cancel-in-progress: false`; `seed` stays out of the group because its stack is local and

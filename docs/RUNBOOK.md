@@ -150,12 +150,12 @@ content goes live with it; no second Publish is needed.
 
   - `Gate configuration is complete` from the preflight (#105) — the release gate has every
     credential the merge gate has, so `secrets: inherit` is doing its job.
-  - The **e2e count**. A release gate runs **60**; a working copy without `SUPABASE_TEST_PASSWORD`
-    runs 37 and skips the other 23. A release run reporting the smaller number is the #103 shape
+  - The **e2e count**. A release gate runs **62**; a working copy without `SUPABASE_TEST_PASSWORD`
+    runs 37 and skips the other 25. A release run reporting the smaller number is the #103 shape
     and must not be released from.
 
     The count grows as tests are added — 54 through `v0.5.1`, 57 after #124 and #125, 60 after
-    #121. **What matters is not the exact figure but that it is the large one:** the failure this
+    #121, 62 after #132. **What matters is not the exact figure but that it is the large one:** the failure this
     guards against is the admin suites silently not running, which shows up as a drop of about
     twenty, not as a drift of one or two. Update this line when it changes rather than letting the
     gap widen until nobody trusts the number.

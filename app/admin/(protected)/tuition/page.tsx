@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { saveTuition } from "@/app/admin/(protected)/tuition/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { Field } from "@/components/admin/Field";
+import { PendingEdit } from "@/components/admin/PendingEdit";
 import { Section } from "@/components/admin/Section";
 import {
   getAdminCatalogue,
@@ -61,6 +62,9 @@ export default async function TuitionPage() {
                     : "Monthly, per child, in whole dollars."
                 }
                 pending={scheduleRates.some((rate) => rate.hasDraft)}
+                pendingCount={
+                  scheduleRates.filter((rate) => rate.hasDraft).length
+                }
               >
                 {scheduleRates.map((rate) => {
                   const pair = `${rate.scheduleId}|${rate.programId}`;
@@ -68,6 +72,25 @@ export default async function TuitionPage() {
 
                   return (
                     <div key={pair}>
+                      {/*
+                       * A rate is the one discardable thing with no key of its own — it is
+                       * identified by the pair it prices, which is why the identity is two
+                       * UUIDs rather than a name. The label has to make up for that: "the
+                       * Five days rate for Toddlers" is the only wording that lands, because
+                       * neither half alone identifies a cell on the densest screen here, and
+                       * the UUIDs identify nothing to a person at all.
+                       */}
+                      <PendingEdit
+                        pending={rate.hasDraft}
+                        discard={{
+                          table: "tuition_rates",
+                          identity: {
+                            schedule_id: rate.scheduleId,
+                            program_id: rate.programId,
+                          },
+                          label: `the ${label.text} rate for ${room.text}`,
+                        }}
+                      />
                       <input type="hidden" name="rate_pair" value={pair} />
                       <Field
                         name={`rate__${pair}`}

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { savePrograms } from "@/app/admin/(protected)/programs/actions";
 import { EditorForm } from "@/components/admin/EditorForm";
 import { Field } from "@/components/admin/Field";
+import { PendingEdit } from "@/components/admin/PendingEdit";
 import { Section } from "@/components/admin/Section";
 import {
   getAdminCatalogue,
@@ -82,10 +83,14 @@ export default async function ProgramsPage() {
             );
           })}
 
+          {/* No `discard` on this section: it covers seven slots, so a control here would be a
+              bulk discard rather than the one-thing-at-a-time action #121 built. Each slot
+              carries its own below, and the badge counts them instead (#132). */}
           <Section
             title="A day here"
             description="The times a parent reads to picture their child's morning. Listed in the order they happen."
             pending={rhythm.some((slot) => slot.hasDraft)}
+            pendingCount={rhythm.filter((slot) => slot.hasDraft).length}
           >
             {rhythm.map((slot) => {
               const label = rhythmLabel(catalogue, slot.labelKey);
@@ -93,26 +98,40 @@ export default async function ProgramsPage() {
               return (
                 <div
                   key={slot.labelKey}
-                  className="grid gap-4 border-b border-border pb-5 last:border-0 last:pb-0 sm:grid-cols-2"
+                  className="border-b border-border pb-5 last:border-0 last:pb-0"
                 >
-                  <input
-                    type="hidden"
-                    name="rhythm_key"
-                    value={slot.labelKey}
+                  {/* Names the slot rather than the field, because a discard reverts the whole
+                      row — the time and its order in the day, not just whichever one was
+                      typed in. */}
+                  <PendingEdit
+                    pending={slot.hasDraft}
+                    discard={{
+                      table: "daily_rhythm",
+                      identity: { label_key: slot.labelKey },
+                      label: `the “${label.text}” slot`,
+                    }}
                   />
-                  <Field
-                    name={`time__${slot.labelKey}`}
-                    label={label.text}
-                    hint="12-hour, no am or pm — the whole list runs through one day."
-                    defaultValue={slot.time}
-                  />
-                  <Field
-                    name={`rhythm_sort_order__${slot.labelKey}`}
-                    label="Order in the day"
-                    type="number"
-                    inputMode="numeric"
-                    defaultValue={slot.sortOrder}
-                  />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <input
+                      type="hidden"
+                      name="rhythm_key"
+                      value={slot.labelKey}
+                    />
+                    <Field
+                      name={`time__${slot.labelKey}`}
+                      label={label.text}
+                      hint="12-hour, no am or pm — the whole list runs through one day."
+                      defaultValue={slot.time}
+                    />
+                    <Field
+                      name={`rhythm_sort_order__${slot.labelKey}`}
+                      label="Order in the day"
+                      type="number"
+                      inputMode="numeric"
+                      defaultValue={slot.sortOrder}
+                    />
+                  </div>
                 </div>
               );
             })}
