@@ -909,6 +909,7 @@ async function removeRowRows() {
 
   await member.from("tuition_schedules").delete().eq("key", SCHEDULE_KEY);
   await member.from("daily_rhythm").delete().eq("label_key", RHYTHM_KEY);
+  await member.from("tuition_fees").delete().neq("registration", -1);
   await member
     .from("prose")
     .delete()
@@ -959,6 +960,31 @@ async function createRowRows() {
     schedule_id: schedule!.id,
     program_id: program!.id,
     per_month: RATE_ORIGINAL,
+    status: "published",
+  });
+
+  /*
+   * A fees row, which this block needs for a reason that is not about fees at all.
+   *
+   * `saveTuition` validates the five fee fields on every save, but the page renders that section
+   * only when the organization *has* a fees row. With none, saving a rate is refused for five
+   * fields that are not on the screen — so the page renders a form it cannot save. The fixture
+   * organization has no fees row, and nothing had ever pressed Save on this page before, which is
+   * why that has gone unnoticed.
+   *
+   * Filed as its own issue rather than fixed here: it needs a decision about what saving a
+   * partially-rendered form should mean, which is a different change from #132 and does not
+   * belong in a feature PR. Willow Grove is seeded with fees, so no real center is in this state
+   * today. Giving the fixture one puts it in the same shape and leaves the rate test testing
+   * discard rather than tripping over this.
+   */
+  await member.from("tuition_fees").insert({
+    org_id: orgId,
+    registration: 100,
+    deposit_weeks: 2,
+    notice_weeks: 4,
+    late_pickup_per_minute: 1,
+    sibling_discount_percent: 10,
     status: "published",
   });
 
