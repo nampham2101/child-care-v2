@@ -36,6 +36,34 @@ export async function saveTuition(
   const discarded = await maybeDiscard(formData);
   if (discarded) return discarded;
 
+  /*
+   * The current rows are read BEFORE validation, and that ordering is the fix for #139.
+   *
+   * The page renders the fees section only when the organization has a `tuition_fees` row. This
+   * action used to validate those five fields regardless, so an organization without one was
+   * refused for fields that were never on the screen — a form that cannot be saved, telling a
+   * staff member to fix things they cannot see. No real center was in that state, because
+   * `seed.sql` gives Willow Grove a fees row; the fixture organization was, and #132's test
+   * pressing Save on this page for the first time is what found it.
+   *
+   * **The database decides, not the submission.** Validating "whatever the form happened to
+   * post" would let a crafted POST skip the rules by omitting the fields, which is the obvious
+   * shape of this fix and the wrong one. Asking whether the row exists is not something the
+   * caller can influence.
+   */
+  let currentRates: Awaited<ReturnType<typeof getEditableRates>>;
+  let currentFees: Awaited<ReturnType<typeof getEditableFees>>;
+  try {
+    [currentRates, currentFees] = await Promise.all([
+      getEditableRates(),
+      getEditableFees(),
+    ]);
+  } catch {
+    return failed(
+      "Something went wrong reading the current rate sheet. Nothing was changed.",
+    );
+  }
+
   const reader = new FieldReader(formData);
 
   const pairs = formData.getAll("rate_pair").map(String);
@@ -54,41 +82,43 @@ export async function saveTuition(
     };
   });
 
-  const fees = {
-    registration: reader.integer("registration", "Registration fee", {
-      min: 0,
-      max: 100_000,
-    }),
-    deposit_weeks: reader.integer("deposit_weeks", "Deposit, in weeks", {
-      min: 0,
-      max: 52,
-    }),
-    notice_weeks: reader.integer("notice_weeks", "Notice required, in weeks", {
-      min: 0,
-      max: 52,
-    }),
-    late_pickup_per_minute: reader.integer(
-      "late_pickup_per_minute",
-      "Late pickup, per minute",
-      { min: 0, max: 1000 },
-    ),
-    sibling_discount_percent: reader.integer(
-      "sibling_discount_percent",
-      "Sibling discount",
-      // Mirrors `sibling_discount_percent between 0 and 100`.
-      { min: 0, max: 100 },
-    ),
-  };
+  // Read on the same condition the page renders them. `saveDraft` refuses to create, so there is
+  // nothing a form could do with these fields when no row exists to update.
+  const fees =
+    currentFees === null
+      ? null
+      : {
+          registration: reader.integer("registration", "Registration fee", {
+            min: 0,
+            max: 100_000,
+          }),
+          deposit_weeks: reader.integer("deposit_weeks", "Deposit, in weeks", {
+            min: 0,
+            max: 52,
+          }),
+          notice_weeks: reader.integer(
+            "notice_weeks",
+            "Notice required, in weeks",
+            { min: 0, max: 52 },
+          ),
+          late_pickup_per_minute: reader.integer(
+            "late_pickup_per_minute",
+            "Late pickup, per minute",
+            { min: 0, max: 1000 },
+          ),
+          sibling_discount_percent: reader.integer(
+            "sibling_discount_percent",
+            "Sibling discount",
+            // Mirrors `sibling_discount_percent between 0 and 100`.
+            { min: 0, max: 100 },
+          ),
+        };
 
   const result = reader.finish({ rateEdits, fees });
   if (!result.ok) return invalid(result.errors);
 
   try {
     const supabase = await createServerSupabase();
-    const [currentRates, currentFees] = await Promise.all([
-      getEditableRates(),
-      getEditableFees(),
-    ]);
 
     let written = 0;
 
@@ -109,17 +139,18 @@ export async function saveTuition(
       written += 1;
     }
 
-    const feesUnchanged =
-      currentFees !== null &&
-      currentFees.registration === fees.registration &&
-      currentFees.depositWeeks === fees.deposit_weeks &&
-      currentFees.noticeWeeks === fees.notice_weeks &&
-      currentFees.latePickupPerMinute === fees.late_pickup_per_minute &&
-      currentFees.siblingDiscountPercent === fees.sibling_discount_percent;
+    if (fees !== null && currentFees !== null) {
+      const feesUnchanged =
+        currentFees.registration === fees.registration &&
+        currentFees.depositWeeks === fees.deposit_weeks &&
+        currentFees.noticeWeeks === fees.notice_weeks &&
+        currentFees.latePickupPerMinute === fees.late_pickup_per_minute &&
+        currentFees.siblingDiscountPercent === fees.sibling_discount_percent;
 
-    if (!feesUnchanged) {
-      await saveDraft(supabase, "tuition_fees", {}, fees);
-      written += 1;
+      if (!feesUnchanged) {
+        await saveDraft(supabase, "tuition_fees", {}, fees);
+        written += 1;
+      }
     }
 
     if (written === 0) {
