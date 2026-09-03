@@ -88,11 +88,15 @@ Things that bite the unwary:
   today only a photograph can be in that state — every other section goes through `saveDraft`,
   which refuses to create. `lib/admin/discard.ts` words the confirmation from whichever case the
   database says it is, rather than from what the page assumed. Do not collapse the two sentences.
-- **The test suites share one live database, and a cancelled CI run leaves rows behind.** Clean-up
-  lives in `afterAll`, which a cancelled job never reaches — so a run killed mid-suite strands
-  fixture rows and the *next* run fails on a count, somewhere nowhere near whatever changed. This
-  cost a red release dry run on 2026-09-02. If a fixture-count assertion fails and the diff looks
-  unrelated, check `programs` for stray `rlsFixture*` keys before believing the failure.
+- **The test suites share one live database, so the runs that touch it queue rather than overlap**
+  (#134). `ci.yml`'s `verify` job is grouped on the constant `hosted-database` with
+  `cancel-in-progress: false`; `seed` stays out of the group because its stack is local and
+  throwaway. **Do not tidy that back to `ci-${{ github.ref }}` with `cancel-in-progress: true`** —
+  clean-up lives in `afterAll`, a cancelled job never reaches it, and the rows it strands fail the
+  *next* run on a count nowhere near whatever changed. That cost a red release dry run on
+  2026-09-02, and `scripts/ci-concurrency.test.mjs` now fails the pull request that undoes it. A
+  run killed some other way can still strand rows; the next failure names them and says
+  `LEFT-OVER FIXTURE STATE, NOT A POLICY FAILURE` rather than looking like a tenancy regression.
 - **A fixture value has to be one the editor itself would accept.** `supabase/fixtures/rls.sql`
   writes through SQL, which skips the form's validation — so a marker longer than the field's own
   limit is a row nobody can save. #123 put a 37-character marker in `ratio`, which `savePrograms`

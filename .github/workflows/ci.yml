@@ -11,9 +11,10 @@ on:
   # so a release verifies the commit it ships rather than trusting main's HEAD.
   workflow_call:
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+# No workflow-level concurrency on purpose (#134). What has to be serialised is the hosted
+# Supabase project, and only the `verify` job below touches it — `seed` builds and destroys a
+# local stack of its own and has no reason to queue behind anything. The group is declared on
+# that job instead, and the reasoning is written out there.
 
 permissions:
   contents: read
@@ -22,6 +23,44 @@ jobs:
   verify:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
+
+    # ---------------------------------------------------------------------------------------
+    # ONE RUN AT A TIME AGAINST THE HOSTED DATABASE, AND NEVER CANCELLED (#134)
+    # ---------------------------------------------------------------------------------------
+    #
+    # `test:db` and `test:e2e` both write to the fixture organization on the one hosted Supabase
+    # project. #98 decided that one shared project is right — CI has no write-capable credential
+    # to create a scratch one with — but nothing then treated the project as the contended
+    # resource that decision makes it. This block is that.
+    #
+    # THE GROUP IS A CONSTANT, NOT `github.ref`. Per-ref grouping serialises a branch against
+    # itself and nothing else, so two pull requests are two refs and used to run at the same
+    # time, both inserting and deleting the same `rlsFixture*` rows. Nobody hit it only because
+    # this project rarely has two branches in flight.
+    #
+    # `cancel-in-progress: false` IS THE OTHER HALF, and it is what the ticket was filed for.
+    # Every suite cleans up in `afterAll`, and a cancelled job never reaches `afterAll` — so
+    # cancelling a run mid-suite strands its fixture rows, and the *next* run fails on a row
+    # count nowhere near whatever it was actually testing. That is the v0.7.0 dry run: starting
+    # it put the release into the same per-ref group as the post-merge CI on `main`, cancelled
+    # that run four seconds after it inserted `rlsFixtureTwin`, and then failed on the three
+    # program rows the strand left behind. The release was fine. The gate shot itself.
+    #
+    # What this costs: pushing twice to a branch in quick succession now runs both gates instead
+    # of superseding the first, and a queued run waits for whatever is ahead of it. Runner
+    # minutes are free on a public repository; a red run that has nothing to do with the diff
+    # costs an afternoon.
+    #
+    # One behaviour worth knowing before it surprises someone: when a run is already executing
+    # and a second is already waiting, a third displaces the *waiting* one, which GitHub reports
+    # as cancelled. That is safe — a job that never started has written nothing — but it means a
+    # release gate can be displaced while it waits. It does not deploy on a cancelled gate, so
+    # the outcome is a release to re-run rather than a bad one to roll back. Cut releases when
+    # the queue is quiet; `docs/RUNBOOK.md` says so at the dry-run step.
+    concurrency:
+      group: hosted-database
+      cancel-in-progress: false
+
     steps:
       - uses: actions/checkout@v7
 

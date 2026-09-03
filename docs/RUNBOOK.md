@@ -127,16 +127,23 @@ content goes live with it; no second Publish is needed.
   `dry_run: true`. Produces a *draft* deploy at its own URL; the live site is untouched. Confirms
   the token/site-id auth, that the Next.js plugin builds, and that the draft renders.
 
-  **Wait for any other run to finish first.** Every workflow shares the one hosted database, and
-  the row-level-security suites write to the fixture organization. Two runs at once interleave; a
-  run that is *cancelled* is worse still, because clean-up lives in `afterAll` and a cancelled job
-  never gets there — so it strands fixture rows and the next run fails on a count.
+  **Runs that touch the hosted database now queue rather than overlap** (#134), so a dry run
+  started minutes after a merge waits for the post-merge CI instead of racing it. `ci.yml`'s
+  `verify` job is grouped on the constant `hosted-database` with `cancel-in-progress: false`;
+  the `seed` job builds a throwaway local stack and stays out of the group.
 
-  This cost a red dry run on 2026-09-02, minutes after a merge: the post-merge CI on `main` was
-  cancelled four seconds after inserting a fixture twin, and the dry run then found three program
-  rows where the suite expects two. Nothing was wrong with the release. If a dry run fails on a
-  fixture count, check `gh run list` for an overlapping run and look for stray `rlsFixture*` keys
-  before believing it.
+  It did not always. On 2026-09-02 the release and the post-merge CI shared a per-ref group, so
+  starting the dry run *cancelled* the CI four seconds after it inserted a fixture twin — and a
+  cancelled job never reaches its `afterAll`, so the row was stranded and the dry run failed on
+  three program rows where the suite expects two. Nothing was wrong with the release.
+
+  A run killed some other way — a dying runner, someone pressing cancel by hand — can still
+  strand rows. The next run now says so in those words: `LEFT-OVER FIXTURE STATE, NOT A POLICY
+  FAILURE`, naming the stray keys and the `delete` that clears them.
+
+  **Cut releases when the queue is quiet.** A gate already *waiting* in the group is displaced if
+  two more runs arrive, which GitHub reports as cancelled. A displaced gate deploys nothing, so
+  the cost is a release to re-run rather than a bad one to roll back.
 
   **It also proves the gate is the full gate**, which is the half that failed silently for five
   weeks (#103). Read two things in the run's log before trusting it:
