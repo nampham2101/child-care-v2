@@ -19,17 +19,36 @@ import type { DiscardTarget } from "@/lib/admin/discard";
  * omitting it renders nothing, which is what a section with no pending edit gets. The two are
  * driven by the same `pending` flag rather than by two independent decisions, so a section can
  * never advertise an unpublished edit it offers no way to take back.
+ *
+ * ## The exception, and what the badge means there (#132)
+ *
+ * Two sections cover many rows at once — "A day here" holds seven `daily_rhythm` slots, and each
+ * tuition schedule holds one `tuition_rates` cell per room. A discard at that level would be a
+ * *bulk* discard, which is a different and riskier action than #121 built, so those sections pass
+ * no `discard`. Each row carries its own `PendingEdit` instead.
+ *
+ * That leaves the section badge saying "Unpublished edit" directly above rows saying the same
+ * words, which is noise. `pendingCount` is the resolution #132 asks for: where rows carry their
+ * own controls, the section badge becomes a **summary** — "3 unpublished edits" — so it answers a
+ * question the rows cannot, which is how much is waiting in a section a person has not scrolled
+ * through yet. Sections that own a single thing keep the plain badge and the discard beside it.
  */
 export function Section({
   title,
   description,
   pending = false,
+  pendingCount,
   discard,
   children,
 }: {
   title: string;
   description?: string;
   pending?: boolean;
+  /**
+   * How many rows inside are pending, for a section whose rows carry their own controls. Turns
+   * the badge into a count. Omit it wherever the section itself is the thing being edited.
+   */
+  pendingCount?: number;
   /** The thing a discard would apply to. Rendered only while `pending`. */
   discard?: DiscardTarget;
   children: ReactNode;
@@ -45,7 +64,7 @@ export function Section({
             </p>
           ) : null}
         </div>
-        {pending ? <DraftBadge /> : null}
+        {pending ? <DraftBadge count={pendingCount} /> : null}
       </div>
 
       {/*
@@ -70,11 +89,17 @@ export function Section({
  * Terracotta, not sage. `docs/CONVENTIONS.md` reserves sage for controls — every call to action
  * on this project is sage and nothing else is — so a status marker in sage would read as
  * something to click.
+ *
+ * `count` is for the summary case only (#132), and one is still written as "Unpublished edit"
+ * rather than "1 unpublished edit": a section holding a single pending row says the same thing
+ * as a section that *is* one pending thing, because to the person reading it, it is.
  */
-export function DraftBadge() {
+export function DraftBadge({ count }: { count?: number }) {
   return (
     <span className="rounded-full bg-terracotta-100 px-3 py-1 text-xs font-semibold tracking-wide text-terracotta-700 uppercase">
-      Unpublished edit
+      {count !== undefined && count > 1
+        ? `${count} unpublished edits`
+        : "Unpublished edit"}
     </span>
   );
 }

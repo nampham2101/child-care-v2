@@ -4,10 +4,9 @@ import { notFound } from "next/navigation";
 
 import { saveProse } from "@/app/admin/(protected)/copy/[group]/actions";
 import { ContentLocaleSwitcher } from "@/components/admin/ContentLocaleSwitcher";
-import { DiscardControl } from "@/components/admin/DiscardControl";
 import { EditorForm } from "@/components/admin/EditorForm";
+import { PendingEdit } from "@/components/admin/PendingEdit";
 import { ProseField } from "@/components/admin/ProseField";
-import { DraftBadge } from "@/components/admin/Section";
 import {
   contentLocaleName,
   DEFAULT_CONTENT_LOCALE,
@@ -124,27 +123,26 @@ export default async function CopyGroupPage({ params, searchParams }: Params) {
             <div className="flex flex-col gap-6 rounded-2xl border border-border bg-cream-50 p-6">
               {strings.map((string) => (
                 <div key={string.key}>
-                  {string.hasDraft ? (
-                    <div className="mb-2 flex flex-col gap-2">
-                      <DraftBadge />
-                      {/* Per string rather than per group. This editor is the one place a
-                          pending edit is already shown for each individual row, and it is where
-                          the "half-typed sentence" #121 opens with actually happens. A prose row
-                          is identified by all three of these — the locale included, or a discard
-                          on the German page would take the English row with it. */}
-                      <DiscardControl
-                        target={{
-                          table: "prose",
-                          identity: {
-                            namespace: string.namespace,
-                            key: string.key,
-                            locale: string.locale,
-                          },
-                          label: `“${string.label}”`,
-                        }}
-                      />
-                    </div>
-                  ) : null}
+                  {/* Per string rather than per group. This editor was the first place a pending
+                      edit was shown for each individual row, and it is where the "half-typed
+                      sentence" #121 opens with actually happens. A prose row is identified by all
+                      three of these — the locale included, or a discard on the German page would
+                      take the English row with it.
+
+                      The badge-and-discard pairing moved into `PendingEdit` when #132 needed it
+                      for rhythm slots and rates too; this renders exactly what it did inline. */}
+                  <PendingEdit
+                    pending={string.hasDraft}
+                    discard={{
+                      table: "prose",
+                      identity: {
+                        namespace: string.namespace,
+                        key: string.key,
+                        locale: string.locale,
+                      },
+                      label: `“${string.label}”`,
+                    }}
+                  />
                   <ProseField
                     name={`prose__${string.key}`}
                     label={string.label}

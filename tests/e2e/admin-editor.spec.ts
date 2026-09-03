@@ -846,3 +846,263 @@ test.describe("discarding a pending edit", () => {
     ).toHaveCount(0);
   });
 });
+
+/**
+ * Discarding one row inside a many-row section — issue #132.
+ *
+ * ## Why this needs its own block, and its own rows
+ *
+ * The block above covers a discard on a `Section` that *is* one thing: a room, and the whole
+ * card belongs to it. #132 is the other shape — "A day here" holds seven `daily_rhythm` slots and
+ * a tuition schedule holds one `tuition_rates` cell per room, so the control has to name a row
+ * rather than the card around it. Nothing above exercises that: a `PendingEdit` rendering in the
+ * wrong place, or naming the wrong row, would leave every existing test green.
+ *
+ * **The fixture organization has neither table seeded**, so signed in as the fixture account both
+ * of those sections render empty — which is exactly why the smoke test above passes today without
+ * covering any of this. `supabase/fixtures/rls.sql` is applied by hand, so adding rows there would
+ * make this suite red until someone ran it against the project. This block creates what it needs
+ * through the member session instead, the way `tests/rls/publish.test.ts` does for its coverage
+ * sweep, and removes it afterwards.
+ *
+ * Every key carries the `rlsFixture` prefix on purpose. If a run is ever killed before its
+ * clean-up, `requireNoStrandedFixtureRows` recognises the leftovers as suite litter and says so,
+ * instead of the next run reporting a tenancy failure (#134).
+ */
+const RHYTHM_KEY = "rlsFixtureSlot";
+const RHYTHM_TIME = "7:30";
+const RHYTHM_EDITED_TIME = "8:45";
+const SCHEDULE_KEY = "rlsFixtureSchedule";
+const RATE_ORIGINAL = 1111;
+const RATE_EDITED = 2222;
+
+/** The names the confirmations have to read back. Prose rows, because that is where the editor
+ *  looks up every label — a raw key here would prove the wiring and not the wording. */
+const RHYTHM_LABEL = "FIXTURE slot — must never be visible";
+const SCHEDULE_LABEL = "FIXTURE schedule — must never be visible";
+
+async function memberClient() {
+  const member = createClient(PROJECT_URL!, ANON_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  await member.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD!,
+  });
+  return member;
+}
+
+/** Removes everything this block creates. Rates before the schedule they reference, because the
+ *  foreign key cascades on delete and a cascade would hide a failure to clean up properly. */
+async function removeRowRows() {
+  if (!PROJECT_URL || !ANON_KEY || !TEST_PASSWORD) return;
+  const member = await memberClient();
+
+  const { data: schedules } = await member
+    .from("tuition_schedules")
+    .select("id")
+    .eq("key", SCHEDULE_KEY);
+
+  for (const schedule of schedules ?? []) {
+    await member.from("tuition_rates").delete().eq("schedule_id", schedule.id);
+  }
+
+  await member.from("tuition_schedules").delete().eq("key", SCHEDULE_KEY);
+  await member.from("daily_rhythm").delete().eq("label_key", RHYTHM_KEY);
+  await member.from("tuition_fees").delete().neq("registration", -1);
+  await member
+    .from("prose")
+    .delete()
+    .in("key", [RHYTHM_KEY, `${SCHEDULE_KEY}Name`]);
+
+  await member.auth.signOut();
+}
+
+async function createRowRows() {
+  if (!PROJECT_URL || !ANON_KEY || !TEST_PASSWORD) return;
+
+  // A previous run that died before its clean-up would otherwise fail the inserts below on the
+  // partial unique index, and the error would name a constraint rather than the real cause.
+  await removeRowRows();
+
+  const member = await memberClient();
+  const { data: orgId } = await member.rpc("current_org_id");
+
+  await member.from("daily_rhythm").insert({
+    org_id: orgId,
+    label_key: RHYTHM_KEY,
+    time: RHYTHM_TIME,
+    sort_order: 991,
+    status: "published",
+  });
+
+  const { data: schedule } = await member
+    .from("tuition_schedules")
+    .insert({
+      org_id: orgId,
+      key: SCHEDULE_KEY,
+      sort_order: 992,
+      status: "published",
+    })
+    .select("id")
+    .single();
+
+  // Priced against the fixture organization's own published room, so the confirmation has a real
+  // room name to read back rather than a raw key.
+  const { data: program } = await member
+    .from("programs")
+    .select("id")
+    .eq("key", PUBLISHED_KEY)
+    .single();
+
+  await member.from("tuition_rates").insert({
+    org_id: orgId,
+    schedule_id: schedule!.id,
+    program_id: program!.id,
+    per_month: RATE_ORIGINAL,
+    status: "published",
+  });
+
+  /*
+   * A fees row, which this block needs for a reason that is not about fees at all.
+   *
+   * `saveTuition` validates the five fee fields on every save, but the page renders that section
+   * only when the organization *has* a fees row. With none, saving a rate is refused for five
+   * fields that are not on the screen — so the page renders a form it cannot save. The fixture
+   * organization has no fees row, and nothing had ever pressed Save on this page before, which is
+   * why that has gone unnoticed.
+   *
+   * Filed as its own issue rather than fixed here: it needs a decision about what saving a
+   * partially-rendered form should mean, which is a different change from #132 and does not
+   * belong in a feature PR. Willow Grove is seeded with fees, so no real center is in this state
+   * today. Giving the fixture one puts it in the same shape and leaves the rate test testing
+   * discard rather than tripping over this.
+   */
+  await member.from("tuition_fees").insert({
+    org_id: orgId,
+    registration: 100,
+    deposit_weeks: 2,
+    notice_weeks: 4,
+    late_pickup_per_minute: 1,
+    sibling_discount_percent: 10,
+    status: "published",
+  });
+
+  // The labels. `Day` and `TuitionPage` are the namespaces `lib/admin/labels.ts` reads for these
+  // two, and `scheduleLabel` appends "Name" to the key — matching that here is what makes the
+  // assertions below about wording rather than about fallbacks.
+  await member.from("prose").insert([
+    {
+      org_id: orgId,
+      locale: "en",
+      namespace: "Day",
+      key: RHYTHM_KEY,
+      value: RHYTHM_LABEL,
+      status: "published",
+    },
+    {
+      org_id: orgId,
+      locale: "en",
+      namespace: "TuitionPage",
+      key: `${SCHEDULE_KEY}Name`,
+      value: SCHEDULE_LABEL,
+      status: "published",
+    },
+  ]);
+
+  await member.auth.signOut();
+}
+
+test.describe("discarding one row inside a many-row section", () => {
+  test.skip(
+    !TEST_PASSWORD,
+    "SUPABASE_TEST_PASSWORD is not set, so there is no session to sign in with.",
+  );
+
+  test.beforeAll(createRowRows);
+  test.afterAll(removeRowRows);
+
+  test("a clock time can be taken back on its own", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/programs", { waitUntil: "load" });
+
+    // Nothing is pending yet, so the slot offers no discard. Asserted first because the whole
+    // complaint in #132 is a badge with no control beside it — the inverse has to hold too.
+    await expect(
+      page.getByRole("button", {
+        name: `Discard the unpublished change to the “${RHYTHM_LABEL}” slot`,
+      }),
+    ).toHaveCount(0);
+
+    await page
+      .getByRole("textbox", { name: RHYTHM_LABEL })
+      .fill(RHYTHM_EDITED_TIME);
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(formStatus(page)).toContainText("saved as a draft");
+
+    await page.reload({ waitUntil: "load" });
+
+    // The row now says so itself, and names itself in the control's accessible name — which is
+    // the whole point on a page listing seven of them.
+    const discard = page.getByRole("button", {
+      name: `Discard the unpublished change to the “${RHYTHM_LABEL}” slot`,
+    });
+    await expect(discard).toBeVisible();
+
+    await discard.click();
+    await expect(formAlert(page)).toContainText(`the “${RHYTHM_LABEL}” slot`);
+    await expect(formAlert(page)).toContainText("The published version stays");
+
+    await page.getByRole("button", { name: /^Yes, discard/ }).click();
+    await expect(formStatus(page)).toContainText("was discarded");
+
+    // Back to the published time, and no longer claiming an edit is waiting.
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByRole("textbox", { name: RHYTHM_LABEL })).toHaveValue(
+      RHYTHM_TIME,
+    );
+    await expect(
+      page.getByRole("button", {
+        name: `Discard the unpublished change to the “${RHYTHM_LABEL}” slot`,
+      }),
+    ).toHaveCount(0);
+  });
+
+  test("a rate names its schedule and its room, and reverts", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/admin/tuition", { waitUntil: "load" });
+
+    await page
+      .getByRole("spinbutton", { name: PROSE_ROOM_LABEL })
+      .fill(String(RATE_EDITED));
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expect(formStatus(page)).toContainText("saved as a draft");
+
+    await page.reload({ waitUntil: "load" });
+
+    /*
+     * The assertion #132 turns on. A rate has no key of its own — it is identified by two UUIDs —
+     * so the label is the only thing standing between a staff member and a confirmation that
+     * names nothing they recognise. Both halves have to be in it: the schedule alone does not say
+     * which room, and the room alone does not say which column.
+     */
+    const expected = `the ${SCHEDULE_LABEL} rate for ${PROSE_ROOM_LABEL}`;
+    const discard = page.getByRole("button", {
+      name: `Discard the unpublished change to ${expected}`,
+    });
+    await expect(discard).toBeVisible();
+
+    await discard.click();
+    await expect(formAlert(page)).toContainText(expected);
+
+    await page.getByRole("button", { name: /^Yes, discard/ }).click();
+    await expect(formStatus(page)).toContainText("was discarded");
+
+    await page.reload({ waitUntil: "load" });
+    await expect(
+      page.getByRole("spinbutton", { name: PROSE_ROOM_LABEL }),
+    ).toHaveValue(String(RATE_ORIGINAL));
+  });
+});
