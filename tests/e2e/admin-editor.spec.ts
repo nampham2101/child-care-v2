@@ -909,6 +909,11 @@ async function removeRowRows() {
 
   await member.from("tuition_schedules").delete().eq("key", SCHEDULE_KEY);
   await member.from("daily_rhythm").delete().eq("label_key", RHYTHM_KEY);
+
+  /* This block creates no fees row (see `createRowRows`), but #132's version did — so one can
+     still be sitting there from a run of the previous code, and it would quietly restore the
+     conditions #139 fixed. Cheap to clear, and it keeps the fixture organization in the state
+     `tests/rls/draft-twins.test.ts` documents: no `tuition_fees` row of its own. */
   await member.from("tuition_fees").delete().neq("registration", -1);
   await member
     .from("prose")
@@ -964,29 +969,18 @@ async function createRowRows() {
   });
 
   /*
-   * A fees row, which this block needs for a reason that is not about fees at all.
+   * NO fees row, deliberately — #139.
    *
-   * `saveTuition` validates the five fee fields on every save, but the page renders that section
-   * only when the organization *has* a fees row. With none, saving a rate is refused for five
-   * fields that are not on the screen — so the page renders a form it cannot save. The fixture
-   * organization has no fees row, and nothing had ever pressed Save on this page before, which is
-   * why that has gone unnoticed.
+   * #132 created one here as a workaround: `saveTuition` validated the five fee fields on every
+   * save while the page rendered that section only when the organization had a row, so the
+   * fixture organization could not save this page at all. #139 made the action read the row
+   * first and validate those fields only when it exists, and removing the workaround is what
+   * proves it: the rate test below now saves against an organization with rates and no fees,
+   * which is the exact shape that used to be refused.
    *
-   * Filed as its own issue rather than fixed here: it needs a decision about what saving a
-   * partially-rendered form should mean, which is a different change from #132 and does not
-   * belong in a feature PR. Willow Grove is seeded with fees, so no real center is in this state
-   * today. Giving the fixture one puts it in the same shape and leaves the rate test testing
-   * discard rather than tripping over this.
+   * Leave it absent. Re-adding a fees row here would make the rate test pass whether or not the
+   * fix is still in place.
    */
-  await member.from("tuition_fees").insert({
-    org_id: orgId,
-    registration: 100,
-    deposit_weeks: 2,
-    notice_weeks: 4,
-    late_pickup_per_minute: 1,
-    sibling_discount_percent: 10,
-    status: "published",
-  });
 
   // The labels. `Day` and `TuitionPage` are the namespaces `lib/admin/labels.ts` reads for these
   // two, and `scheduleLabel` appends "Name" to the key — matching that here is what makes the
@@ -1073,6 +1067,13 @@ test.describe("discarding one row inside a many-row section", () => {
   }) => {
     await signIn(page);
     await page.goto("/admin/tuition", { waitUntil: "load" });
+
+    // The fixture organization has rates and no fees row. #139: the page says so instead of
+    // leaving a silent gap, and — the part that matters — the save below is not refused for the
+    // five fields this branch did not render.
+    await expect(
+      page.getByText("not set up for this center yet"),
+    ).toBeVisible();
 
     await page
       .getByRole("spinbutton", { name: PROSE_ROOM_LABEL })

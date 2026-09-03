@@ -158,7 +158,20 @@ export default async function TuitionPage() {
                 defaultValue={fees.siblingDiscountPercent}
               />
             </Section>
-          ) : null}
+          ) : (
+            /* Said out loud rather than left as an absence (#139). Every other number on this
+               page is editable, so a missing block reads as something broken or taken away —
+               and until the action stopped validating these fields regardless, it *was* broken:
+               saving was refused for five fields nobody could see. `saveDraft` refuses to
+               create, so there is genuinely nothing to edit here until the row exists. */
+            <p className="max-w-prose rounded-2xl border border-border bg-cream-50 px-5 py-4 text-ink-700">
+              The registration fee, deposit, notice period, late pickup charge
+              and sibling discount are not set up for this center yet, so there
+              is nothing here to edit. They are added once by a developer; after
+              that they are edited here like every other number. The rates above
+              save normally in the meantime.
+            </p>
+          )}
         </EditorForm>
       </div>
     </>
