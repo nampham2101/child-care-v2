@@ -932,3 +932,93 @@ live site for a real center, the translations need a native reviewer before laun
 
 Split across three tickets so a stall in one language cannot block the other: #52 is the switcher and
 SEO infrastructure (no new language), #53 is German, #54 is Italian.
+
+---
+
+## Closing note — archived at `v0.8.0`, 2026-09-04
+
+This project is finished, in the sense that it was stopped deliberately rather than abandoned
+mid-change. `v0.8.0` was released on 2026-09-03, the release run succeeded, `main` is level with the
+tag, and CI was green. **Freezing on a released tag is the whole point of stopping here**: the code
+in this repository is exactly the code serving the live site, so there is no gap for a future reader
+to reconstruct.
+
+The repository is read-only. The site stays live at <https://child-care-v2.netlify.app>. Because the
+public pages are prerendered at build time and the database is never in a visitor's request path,
+**the site does not depend on Supabase staying awake** — a paused or deleted project takes nothing
+down. It only means the site can no longer be rebuilt.
+
+### Where it stopped
+
+Eight releases, `v0.1.0` through `v0.8.0`. Seven public pages, prerendered in English and German,
+with every fact and every sentence read from Supabase at build time. Row-level security on, with the
+anonymous key able to read published rows only. A staff admin area behind Supabase Auth where
+content is edited in either language on a draft-then-publish path, photographs of the spaces are
+uploaded, individual pending edits are discarded, and Publish rebuilds production.
+
+`v1.0.0` was never reached, and was never going to be. What remained for it was launch preparation —
+real center details, a performance and accessibility pass, legal pages, a domain — and every item on
+that list presumes a real center. This one is a fictional placeholder with no users, which is
+recorded above as a deliberate decision rather than a gap.
+
+### What was deliberately not built
+
+None of these is a loose end. Each was a considered decision, and the reasoning is here so it does
+not have to be re-derived by whoever finds the repository next.
+
+- **The Italian catalogue (#54).** Closed unbuilt. The infrastructure was genuinely finished and
+  waiting — the switcher, `hreflang`, the sitemap and the admin's content-locale control all derive
+  from `routing.locales`, so adding `"it"` is one line. What was never written is the content behind
+  it: roughly 279 prose rows, a CI parity check across configured locales, translated metadata, and
+  an unresolved question about whether Italian pages should present 24-hour time. Building it would
+  have forced a choice between cutting `v0.9.0` — restarting the release cycle the archive ends —
+  and freezing with `main` ahead of the tag, holding a feature production never received.
+  **Note that the `AGENTS.md` shorthand "adding Italian is a one-line change" is true only of the
+  wiring.** It was written to make a point about the gating paying off, and it undersells the
+  content by roughly 4,000 words.
+- **The Next 16 `proxy` migration (#27).** Closed unbuilt, and it could not have been finished
+  anyway: its completion condition is a check against a Netlify Deploy Preview, and no further
+  deploys are planned. The state it is left in is safe — `middleware.ts` builds clean and the
+  `/` → `/en` redirect every first-time visitor arrives through works as it stands. The deprecation
+  warning is cosmetic. **Anyone reviving this project should treat the runtime check as the first
+  step, not the rename.**
+- **Per-language publishing.** Resolved rather than dropped: publishing stays organization-wide, in
+  every language at once, per `docs/adr/0002-publishing-stays-organization-wide.md`.
+- **The operations platform.** Out of scope from the first plan and still out of scope. The
+  multi-tenant-ready schema and Supabase Auth are what it would have stood on, and both are in place.
+
+The four **open questions** above are left open on purpose. Three of them — real center details,
+positioning, analytics — only have answers for a real center. The fourth, whether owner review
+before merge outlives `v0.4.0`, was correctly left for whoever plans `v1.0.0` to decide against that
+release's risk profile; nobody did, so it stands unanswered rather than answered badly.
+
+### Why the queue was closed rather than worked to the bottom
+
+`AGENTS.md` §7 instructs every agent session to file an issue for work found outside its task, and
+to write down any decision before the session ends. That rule is why nothing was silently dropped
+across eight releases, and it is the reason this document is worth reading at all. It is also a
+generator: the backlog refilled on its own, so **there was no state in which the work was
+"finished"** and no amount of working the queue would have arrived at one. The line had to be drawn
+by decision. It was drawn at `v0.8.0`, and making the repository read-only is what actually holds
+it — closing the open issues alone would have bought a few days.
+
+### What reviving this would take
+
+In order, because the order is not obvious:
+
+1. **Unarchive the repository.** An archived repository accepts no pull requests, so nothing else
+   can happen first.
+2. **Check whether Supabase is still there.** A paused project resumes from its dashboard; a deleted
+   one has to be rebuilt from `supabase/migrations/` and reseeded. `docs/RUNBOOK.md` covers the
+   restore path, and the recovery scripts were verified against a throwaway database (#98).
+3. **Re-point the environment.** Netlify and GitHub Actions both hold Supabase credentials as
+   secrets. New project, new keys, in both places.
+4. **Run the full gate locally before trusting anything** — format, lint, typecheck, unit, database
+   suites, build, end-to-end. The database suites run against the real hosted project, so they are
+   the honest check that step 3 actually worked.
+5. **Only then re-enable production deploys** in Netlify, and cut a release. Merging still does not
+   deploy; publishing a release does.
+
+The dependency versions in `package-lock.json` will be old by the time anyone reads this. Expect the
+Next 16 `proxy` deprecation in #27 to have become a hard break rather than a warning, and treat that
+as the first real piece of work rather than a surprise.
