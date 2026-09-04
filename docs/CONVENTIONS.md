@@ -371,6 +371,37 @@ do, in the same PR that adds them.
 - **Publishing a GitHub Release** creates the `v*` tag and triggers the production deploy.
 - Rollback is republishing the previous Netlify deploy — seconds, no rebuild, no revert commit.
 
+### Whether a release is worth cutting at all
+
+The table above sizes a release. It does not say whether to cut one, so that question was re-argued
+from scratch every time it came up.
+
+**A release needs a change to what the site serves.** When the only commits since the last tag are
+CI, tests, or documentation, they bundle into the next release that carries real change.
+
+The check, which is what makes this decidable rather than a matter of taste:
+
+```bash
+git diff --stat "$(git describe --tags --abbrev=0)"..main -- ':!docs' ':!*.md' ':!.github' ':!scripts' ':!tests'
+```
+
+Empty output means there is nothing to release.
+
+It is a rule rather than a preference for three reasons:
+
+- **A tag is the rollback unit.** One containing no product change is a rollback target that rolls
+  nothing back.
+- **The release history implies a change to the site.** An entry that has none misleads whoever
+  reads it later looking for when something shipped.
+- **A CI fix protects the gate, not the artifact.** It takes effect on `main` with no deploy at all.
+  #135 is the worked example — it was already doing its job before any tag existed.
+
+**The corollary carries as much weight as the rule: `main` sitting ahead of the latest tag is a
+normal state, not drift to be fixed.** Left unwritten, the gap reads as something someone forgot to
+do, and the fix for that misreading is a pointless release. It came up on 2026-09-03, when every
+commit since `v0.7.0` was `ci:` or `docs:` — #133, #135, #136 — and a `v0.7.1` would have run the
+full gate to redeploy byte-identical content.
+
 ### Release notes
 
 **There is no `CHANGELOG.md`, and there will not be one.** GitHub Releases is the record: every

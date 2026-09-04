@@ -3,12 +3,28 @@
 You are working on the marketing website for a child care center. This file is the entry point for
 any AI agent in this repository. Humans read `docs/`; you read this first.
 
+> ## This project is archived
+>
+> **`v0.8.0`, released 2026-09-03, is the final version.** The repository is read-only, the issue
+> queue is empty and closed, and no further releases are planned. The site stays live at
+> <https://child-care-v2.netlify.app>.
+>
+> **Do not draft tickets, and do not start work.** The instructions below describe how this project
+> ran while it was live, and they are kept because the reasoning in them is the point of the
+> archive — not because there is anything left to do. In particular, §7 tells you to file an issue
+> for anything you find. That rule is what kept the backlog honest for eight releases, and it is
+> also a generator: it is why the queue kept refilling, and why the repository being read-only is
+> the thing that actually ends it.
+>
+> If you are here to revive the project rather than read it, the closing note at the end of
+> `docs/PLAN.md` is the place to start.
+
 **Repository:** `nampham2101/child-care-v2` — **public**. Issue text, pull request descriptions,
 commit messages, and branch names are world-readable from the moment they are pushed. Write them for
 that audience, and never put anything in them you would not publish.
 **Stack:** Next.js (App Router, TypeScript) · Netlify hosting · Supabase from `v0.3.0` onward
-**Current state:** `v0.7.0` is the released version, live at <https://child-care-v2.netlify.app>
-and deployed 2026-09-02. All seven public pages — home, `/programs`, `/about`, `/staff`,
+**Final state:** `v0.8.0` is the released version, live at <https://child-care-v2.netlify.app>
+and deployed 2026-09-03. All seven public pages — home, `/programs`, `/about`, `/staff`,
 `/tuition`, `/faq`, `/contact` — read their facts and prose from Supabase at build time, and
 render in **English and German**: `routing.locales` is `["en", "de"]`, and `/de/*` is prerendered
 beside `/en/*`. Row-level security is on, and the anonymous key can read published rows only.
@@ -26,14 +42,19 @@ the copy editor), #52 (public switcher, `hreflang`, sitemap), with #112 and #115
 `v0.5.1` followed with #120. `v0.6.0` is the language itself: #53 (the German catalogue) and #123
 (the last two untranslatable columns), with #122 alongside. `v0.7.0` is #121 (discard a pending
 draft), plus two repairs to the recovery path — #126 (a rebuilt database had no copy at all) and
-#127 (a migration filename disagreeing with its applied version).
+#127 (a migration filename disagreeing with its applied version). `v0.8.0`, the final release, is
+#132 (a discard control on the individual day-slot and tuition-rate rows) and #139 (the tuition page
+could not save at a center with no fees row), with #134 alongside — the CI concurrency fix that
+stopped the shared-database suites cancelling each other mid-cleanup.
 
 Every piece of #52 and #111 that was gated on `routing.locales.length > 1` lit up by itself when
 `de` was routed — the public switcher, `hreflang`, the sitemap's German entries, the admin's
 content-locale control. Nothing had to be flipped on; that gating was the design paying out, and it
 is why **adding Italian (#54) should stay a one-line change to `routing.locales` plus a catalogue.**
 
-**#54, #27 and #132 are all proposals.** Do not start them without an assignment.
+**Nothing is open.** #132 shipped in `v0.8.0`. #54 (the Italian catalogue) and #27 (the Next 16
+`proxy` migration) were closed unbuilt when the project was archived — see the closing note in
+`docs/PLAN.md` for why, and why neither is a loose end.
 
 **No English string reaches a German page any more.** `programs.age_label` and
 `programs.group_size` were the last two — English sentences in a facts table with no locale, so
